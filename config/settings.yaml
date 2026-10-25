@@ -1,0 +1,110 @@
+# =============================================================
+# Local-First Agent Ecosystem — Phase 1 Configuration
+# All inference runs locally via Ollama. No data leaves the
+# machine except through the approved egress path (Agent 3).
+# =============================================================
+
+platform:
+  name: "Local-First Agent Ecosystem"
+  phase: 1
+  description: >
+    Internal legal/compliance agent platform. Private data stays inside.
+    Single entry/exit point (Orchestrator), mandatory human review for
+    drafts and external sharing, full audit trail on every action.
+
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  default_model: "llama3.1:8b"
+  request_timeout_seconds: 300
+  max_retries: 2
+  # Per-agent model overrides (task -> model + config + version)
+  model_overrides:
+    # "agent_4_document_intake_ocr": "llama3.1:8b"
+    # "agent_1_orchestrator": "llama3.1:8b"
+  temperature: 0.2
+  # Embedding model for the local vector index
+  embedding_model: "nomic-embed-text"
+  embedding_dim: 768
+
+storage:
+  data_dir: "data"
+  # SQLite file for the structured knowledge store
+  database: "data/knowledge.db"
+  # Where ingested raw documents are kept (originals never modified)
+  documents_dir: "data/documents"
+  # Audit log (append-only JSONL)
+  audit_log: "data/audit_log.jsonl"
+  # Approved versions / change log written by Agent 9
+  build_docs_dir: "data/build_docs"
+
+retrieval:
+  # Hybrid search: dense vectors + BM25-style keyword scoring
+  top_k: 6
+  keyword_weight: 0.4
+  vector_weight: 0.6
+  min_score: 0.25
+
+policy:
+  # Users and their roles. Roles map to permission levels.
+  users:
+    - username: "admin"
+      role: "admin"
+    - username: "reviewer"
+      role: "reviewer"
+    - username: "analyst"
+      role: "analyst"
+  # Which roles may approve drafts / external sharing
+  approver_roles: ["admin", "reviewer"]
+  # Which roles may trigger voice notifications
+  voice_roles: ["admin", "reviewer"]
+  # Sensitivity levels (lowest to highest)
+  sensitivity_levels: ["public", "internal", "confidential", "restricted"]
+  # External sources permitted for Agent 3 (allowlist)
+  permitted_external_sources:
+    - "https://www.indiacode.nic.in"
+    - "https://main.sci.gov.in"
+    - "https://www.mca.gov.in"
+    - "https://www.bseindia.com"
+    - "https://www.nseindia.com"
+    - "https://www.incometax.gov.in"
+    - "https://www.tin.gov.in"
+
+agents:
+  # Enable/disable individual agents. All 16 on by default.
+  enabled:
+    agent_1_orchestrator: true
+    agent_2_internal_information: true
+    agent_3_external_information: true
+    agent_4_document_intake_ocr: true
+    agent_5_case_analysis: true
+    agent_6_legal_research: true
+    agent_7_drafting: true
+    agent_8_compliance_risk: true
+    agent_9_build_documentation: true
+    agent_10_query_support: true
+    agent_11_entity_company_intelligence: true
+    agent_12_debt_settlement: true
+    agent_13_land_title: true
+    agent_14_tax_intelligence: true
+    agent_15_reporting_analytics: true
+    agent_16_voice_notification: true
+
+  # Agent 16: voice notification rules (approved message only)
+  voice:
+    consent_required: true
+    calling_hours:
+      start: "09:00"
+      end: "18:00"
+      timezone: "Asia/Calcutta"
+    identity_check_required: true
+    acknowledgement_required: true
+    # In Phase 1 the actual call is simulated/logged; plug a telephony
+    # provider here later.
+    provider: "simulated"
+
+orchestrator:
+  # Max sequential routing hops before a request is returned with a
+  # partial answer (prevents agent loops).
+  max_hops: 8
+  # Whether the orchestrator may run independent agent tasks in parallel
+  allow_parallel: false
