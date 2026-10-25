@@ -23,6 +23,14 @@ from .core.knowledge import KnowledgeStore
 from .core.memory import MemorySystem
 from .core.ollama import OllamaClient, ModelRegistry
 from .core.policy import Identity, PolicyEngine
+from .core.telephony import build_voice_provider
+from .learning.answerer import GroundedAnswerer
+from .learning.consolidator import MemoryConsolidator
+from .learning.insight_miner import InsightMiner
+from .learning.regression import RegressionHarness
+from .learning.scheduler import LearningScheduler
+from .learning.trajectory import TrajectoryStore
+from .learning.verification import VerificationGate
 
 
 @dataclass
@@ -31,6 +39,10 @@ class Platform:
     services: PlatformServices
     agents: Dict[str, BaseAgent]
     audit: AuditLog
+    # Phase 2: self-learning engine components
+    trajectory_store: Optional[TrajectoryStore] = None
+    learning_scheduler: Optional[LearningScheduler] = None
+    exam: List[Dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self):
         # convenience
@@ -78,8 +90,21 @@ class Platform:
         result = orchestrator.handle(ctx)
 
         # Record which agents ran (for Agent 9 build documentation)
-        ctx.state["agents_run"] = [s["agent"] for s in result.data.get("steps", [])]
+        agents_run = [s["agent"] for s in result.data.get("steps", [])]
+        ctx.state["agents_run"] = agents_run
         ctx.state["intent"] = result.data.get("intent")
+
+        # Phase 2: capture the task as an anonymized trajectory for the
+        # self-learning engine (only if the engine is wired up).
+        if self.trajectory_store is not None:
+            self.trajectory_store.record(
+                task_id=task_id,
+                request=request,
+                agents_run=agents_run,
+                final_status=result.status,
+                sources=result.sources,
+                user=username,
+            )
 
         # Clear working memory when the task completes
         self.services.memory.clear_task(task_id)
@@ -135,18 +160,81 @@ class Platform:
                     user: Optional[str] = None, limit: int = 200) -> List[Dict[str, Any]]:
         return self.audit.query(actor=actor, action=action, user=user, limit=limit)
 
+    # ---------- Phase 2: self-learning ----------
+
+    def learn(self) -> Dict[str, Any]:
+        """Run one budgeted self-learning pass.
+
+        Mines candidate insights/skills from captured trajectories,
+        verifies each (replay + hold-out + review), runs the regression
+        harness, and promotes survivors reversibly. Returns the run
+        report. No-op (with a clear note) if the engine is not wired.
+        """
+        if self.learning_scheduler is None:
+            return {"error": "learning engine not wired. "
+                             "Pass exam/enable learning in create_platform."}
+        baseline = GroundedAnswerer(self.services)
+        report = self.learning_scheduler.run(baseline_answer_fn=baseline)
+        return report.to_dict()
+
+    def learning_dashboard(self) -> Dict[str, Any]:
+        if self.learning_scheduler is None:
+            return {"error": "learning engine not wired."}
+        return self.learning_scheduler.dashboard()
+
+    def seed_dataset(self, dataset_dir: str) -> int:
+        """Load a generated dataset (documents.json) into the knowledge
+        store. Returns the number of documents added. Idempotent-ish:
+        skips documents whose source already exists."""
+        import json
+        docs_path = os.path.join(dataset_dir, "documents.json")
+        if not os.path.isfile(docs_path):
+            raise FileNotFoundError(f"No documents.json in {dataset_dir}")
+        with open(docs_path, "r", encoding="utf-8") as f:
+            docs = json.load(f)
+        added = 0
+        for d in docs:
+            # skip if a doc with the same source already exists
+            existing = self.knowledge._conn.execute(
+                "SELECT id FROM documents WHERE source = ? LIMIT 1",
+                (d.get("source", ""),),
+            ).fetchone()
+            if existing:
+                continue
+            self.knowledge.add_document(
+                title=d.get("title", "untitled"),
+                content=d.get("content", ""),
+                source=d.get("source", ""),
+                doc_type=d.get("doc_type", "note"),
+                sensitivity=d.get("sensitivity", "internal"),
+                metadata={k: v for k, v in d.items()
+                          if k not in ("title", "content", "source",
+                                       "doc_type", "sensitivity")},
+            )
+            added += 1
+        self.audit.record(actor="platform", action="seed_dataset",
+                          detail={"dir": dataset_dir, "added": added},
+                          result="done")
+        return added
+
     def close(self):
         self.knowledge.close()
 
 
 def create_platform(config_path: Optional[str] = None,
-                    ollama_client=None) -> Platform:
+                    ollama_client=None,
+                    enable_learning: Optional[bool] = None,
+                    dataset_dir: Optional[str] = None) -> Platform:
     """Build the full platform.
 
     Args:
         config_path: path to settings.yaml (defaults to config/settings.yaml).
         ollama_client: inject a custom OllamaClient (e.g. MockOllamaClient
             for tests). If None, a real client is created from settings.
+        enable_learning: wire up the Phase 2 self-learning engine.
+            Defaults to the `learning.enabled` config value.
+        dataset_dir: if given, seed the knowledge store from this dataset
+            directory (containing documents.json).
     """
     settings = load_settings(config_path)
     settings.ensure_storage_dirs()
@@ -204,7 +292,68 @@ def create_platform(config_path: Optional[str] = None,
 
     agents = build_agents(services)
 
-    return Platform(settings=settings, services=services, agents=agents, audit=audit)
+    platform = Platform(settings=settings, services=services,
+                        agents=agents, audit=audit)
+
+    # Seed the knowledge store from a dataset if requested.
+    if dataset_dir:
+        platform.seed_dataset(dataset_dir)
+
+    # Phase 2: wire the self-learning engine (default from config).
+    if enable_learning is None:
+        enable_learning = settings.learning.enabled
+    if enable_learning:
+        _wire_learning_engine(platform, settings, services, memory,
+                              registry, audit)
+
+    return platform
+
+
+def _wire_learning_engine(platform: Platform, settings: Settings,
+                          services: PlatformServices,
+                          memory: MemorySystem, registry: ModelRegistry,
+                          audit: AuditLog) -> None:
+    """Build the trajectory store, miner, verification gate, regression
+    harness, consolidator, and scheduler; attach to the platform."""
+    import json as _json
+    data_dir = settings.resolve_path(settings.storage.data_dir)
+
+    traj_path = os.path.join(data_dir, "trajectories.jsonl")
+    traj_store = TrajectoryStore(traj_path)
+
+    # Exam set: from the configured path (generated dataset) if present.
+    exam: List[Dict[str, Any]] = []
+    exam_path = settings.resolve_path(settings.learning.exam_path)
+    if os.path.isfile(exam_path):
+        with open(exam_path, "r", encoding="utf-8") as f:
+            exam = _json.load(f)
+
+    miner = InsightMiner(ollama=services.ollama)
+    baseline = GroundedAnswerer(services)
+    verification = VerificationGate(exam=exam, answer_fn=baseline, audit=audit)
+    regression = RegressionHarness(exam=exam,
+                                   min_accuracy=settings.learning.min_accuracy,
+                                   audit=audit)
+    consolidator = MemoryConsolidator(memory, audit=audit)
+
+    state_path = os.path.join(data_dir, "learning_state.json")
+    scheduler = LearningScheduler(
+        trajectory_store=traj_store,
+        miner=miner,
+        verification=verification,
+        regression=regression,
+        consolidator=consolidator,
+        registry=registry,
+        memory=memory,
+        audit=audit,
+        budget_per_run=settings.learning.budget_per_run,
+        min_accuracy=settings.learning.min_accuracy,
+        state_path=state_path,
+    )
+
+    platform.trajectory_store = traj_store
+    platform.learning_scheduler = scheduler
+    platform.exam = exam
 
 
 def _make_embedder(ollama, settings):

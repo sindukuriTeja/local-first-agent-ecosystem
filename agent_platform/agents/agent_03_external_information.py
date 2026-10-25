@@ -114,10 +114,10 @@ class ExternalInformationAgent(BaseAgent):
     def __init__(self, services, fetcher: Optional[BaseFetcher] = None):
         super().__init__(services)
         if fetcher is None:
-            cache_path = services.settings.resolve_path(
-                os.path.join(services.settings.storage.data_dir, "external_cache.json")
-            )
-            fetcher = LocalCacheFetcher(cache_path)
+            # Use the config-driven factory: offline cache by default,
+            # live allowlisted fetching when enabled in config.
+            from ..core.web_fetcher import build_fetcher
+            fetcher = build_fetcher(services.settings, audit=services.audit)
         self.fetcher = fetcher
 
     def run(self, ctx: AgentContext) -> AgentResult:

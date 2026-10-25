@@ -1,12 +1,18 @@
-# Local-First Agent Ecosystem — Phase 1
+# Local-First Agent Ecosystem — Phase 1 + 2
 
 A **16-agent legal/compliance AI platform** that runs entirely on your own
 hardware. All inference is local (Ollama), all knowledge is stored locally,
 every action is audited, and nothing leaves the machine except through a
 single, allowlisted, audited egress path.
 
+Phase 2 adds a **self-learning engine** (budgeted, verified, reversible),
+**real telephony providers** (Twilio / Exotel / MSG91), **live web
+fetching** (allowlisted, audited), a **reviewer web UI**, and a
+**synthetic training dataset**.
+
 > **Private data stays inside.** Single entry/exit point. Mandatory human
-> review. Full audit trail.
+> review. Full audit trail. Learning is verified against a hold-out exam
+> before anything is promoted.
 
 ## Design principles
 
@@ -39,7 +45,7 @@ single, allowlisted, audited egress path.
 | 13 | **Land & Title** | Parcels, title chain, mortgages, disputes, approvals. Feeds due dates to Compliance (#8). |
 | 14 | **Tax Intelligence** | Notices, demands, due dates, appeals, payments, pre-deposits. Feeds deadline/risk to Compliance (#8). |
 | 15 | **Reporting & Analytics** | Dashboards, board view, PDF/Word/Excel reports from **verified/labelled data only**. External sharing needs approval. |
-| 16 | **Voice Notification** | Approved message only. Consent + calling hours + identity check + acknowledgement. Simulated provider in Phase 1. |
+| 16 | **Voice Notification** | Approved message only. Consent + calling hours + identity check + acknowledgement. Providers: simulated (default), Twilio, Exotel, MSG91. |
 
 ## Architecture
 
@@ -57,6 +63,14 @@ User ──> Agent 1 Orchestrator ──> specialist agents (2–16)
               │
               ▼
        Append-only Audit Log  +  Approval Gate (human review)
+              |
+              v  (Phase 2)
+       Trajectory Store -> Insight Miner -> Verification Gate
+              |                   (replay + hold-out exam + review)
+              v
+       Regression Harness -> reversible promotion -> Memory
+              ^
+       Reviewer Web UI (/reviewer)  +  CLI `learn` command
 ```
 
 ## Quick start
@@ -93,17 +107,44 @@ python -m agent_platform.cli ask --user admin "What is the filing deadline for m
 python -m agent_platform.cli ingest --user admin --file path/to/notice.pdf
 ```
 
-### 4. Run the API server (optional)
+### 4. Run the API server + reviewer UI
 
 ```bash
 python -m agent_platform.server
 # -> http://127.0.0.1:8000  (docs at /docs)
+# -> http://127.0.0.1:8000/reviewer   (reviewer web UI)
 ```
 
 Key endpoints: `POST /ask`, `POST /ingest`, `GET /agents`, `GET /models`,
-`GET /approvals`, `POST /approvals/decide`, `GET /audit`, `GET /health`.
+`GET /approvals`, `POST /approvals/decide`, `GET /audit`, `GET /health`,
+`GET /reviewer`, `GET /documents`, `GET /search`, `GET /learning`,
+`POST /learn`.
 
-### 5. Run the tests
+Or just:
+
+```bash
+python -m agent_platform.cli reviewer --open
+```
+
+### 5. Phase 2: self-learning
+
+```bash
+# Generate the synthetic dataset (documents + statutes + judgments + exam)
+python scripts/generate_dataset.py --out data/dataset
+
+# Run one budgeted learning pass (mine -> verify -> regression -> promote)
+python -m agent_platform.cli learn
+
+# Show the learning dashboard
+python -m agent_platform.cli learning
+```
+
+The engine only promotes a learned insight/skill if it passes **replay**
+(the trajectories it was mined from), **hold-out** (the Q&A exam set),
+and the **regression harness** (no accuracy drop). Promotion is reversible
+and every step is audit-logged.
+
+### 6. Run the tests
 
 Tests use a mocked Ollama client, so **no model is needed** to run them:
 
@@ -118,7 +159,9 @@ Everything lives in **[`config/settings.yaml`](config/settings.yaml)**:
 - **`ollama`** — base URL, default model, per-agent model overrides, embedding model.
 - **`policy`** — users + roles, approver/voice roles, sensitivity ladder, **permitted external sources** (the egress allowlist).
 - **`agents.enabled`** — toggle any of the 16 agents on/off.
-- **`agents.voice`** — calling hours, consent/identity/ack requirements, provider.
+- **`agents.external.fetcher`** — Agent 3 mode: `cache` (offline, default) or `live` (allowlisted HTTP egress).
+- **`agents.voice`** — calling hours, consent/identity/ack requirements, provider (`simulated` | `twilio` | `exotel` | `msg91`).
+- **`learning`** — self-learning engine: `enabled`, `budget_per_run`, `min_accuracy`, `exam_path`.
 - **`retrieval`** — hybrid search weights (keyword vs. vector), top-k, min score.
 
 ## Security model
@@ -148,33 +191,56 @@ local-first-agent-ecosystem/
 │   │   ├── policy.py             # identity, sensitivity, egress allowlist
 │   │   ├── approval.py           # human approval gate
 │   │   ├── audit.py              # append-only audit log
+│   │   ├── web_fetcher.py        # Phase 2: allowlisted live egress + cache
+│   │   ├── telephony.py          # Phase 2: Twilio/Exotel/MSG91 voice providers
 │   │   └── base_agent.py         # BaseAgent + context/result types
+│   ├── learning/                 # Phase 2: self-learning engine (L4)
+│   │   ├── trajectory.py         # anonymized task trajectories
+│   │   ├── insight_miner.py      # mines candidate insights/skills
+│   │   ├── verification.py       # replay + hold-out exam + review gate
+│   │   ├── regression.py         # no-regression harness (exam accuracy)
+│   │   ├── consolidator.py       # memory consolidation (dedupe/decay)
+│   │   ├── scheduler.py          # budgeted async learning job
+│   │   └── answerer.py           # grounded answer path (eval "model")
 │   ├── agents/                   # the 16 agents
 │   │   ├── agent_01_orchestrator.py
 │   │   ├── ... (agent_02 .. agent_16)
 │   │   └── registry.py           # builds + wires all agents
-│   ├── platform.py               # factory: wires services + agents
+│   ├── platform.py               # factory: wires services + agents + learning
 │   ├── server.py                 # FastAPI local server
-│   └── cli.py                    # command-line interface
+│   ├── reviewer.py               # Phase 2: reviewer web UI (self-contained)
+│   └── cli.py                    # command-line interface (+ learn/reviewer)
+├── scripts/generate_dataset.py   # Phase 2: synthetic dataset generator
 ├── tests/                        # pytest suite (mocked Ollama)
 ├── docs/ARCHITECTURE.md          # full architecture reference
 ├── requirements.txt
 └── data/                         # runtime data (gitignored)
 ```
 
-## Phase 1 scope & future work
+## Phase scope
 
-**In Phase 1:** all 16 agents, local Ollama inference, hybrid retrieval,
+**Phase 1:** all 16 agents, local Ollama inference, hybrid retrieval,
 document intake with OCR + field extraction, the full approval + audit +
 policy layer, and a simulated voice provider.
 
+**Phase 2 (done):**
+- **Self-learning engine** — trajectory store → insight miner →
+  verification gate (replay + hold-out exam + human review) → regression
+  harness → reversible promotion. Budgeted, async, fully audited.
+- **Real telephony providers** for Agent 16 — Twilio, Exotel, MSG91
+  (config-driven; degrades to simulated when unconfigured).
+- **Live web fetching** for Agent 3 — allowlisted, audited HTTP egress
+  (`agents.external.fetcher: live`); the offline cache remains the default.
+- **Reviewer web UI** — self-contained dashboard at `/reviewer`
+  (approvals, documents, audit, learning) with zero external dependencies.
+- **Synthetic dataset** — `scripts/generate_dataset.py` generates statutes,
+  judgments, notices, parcels, debt facilities, matters, entities, and a
+  Q&A exam set used to seed the knowledge store and gate learning.
+
 **Intentionally deferred (later phases):**
-- The **self-learning engine** (trajectory store → insight miner →
-  verification gate → model promotion) from the full ecosystem diagram.
-- A **real telephony provider** for Agent 16 (currently simulated/logged).
-- **Live web fetching** for Agent 3 (currently served from a local cache of
-  pre-approved public documents to stay fully offline).
-- A **rich UI** for the human reviewer (the API/CLI cover the same flows).
+- Continuous scheduled learning runs (currently on-demand via `learn`).
+- Multi-tenant isolation beyond the existing tenant field.
+- Real document OCR backends (Phase 1/2 use a local text-extraction path).
 
 ## License
 

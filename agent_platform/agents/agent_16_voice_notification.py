@@ -74,10 +74,14 @@ class VoiceNotificationAgent(BaseAgent):
     def __init__(self, services, provider: Optional[VoiceProvider] = None):
         super().__init__(services)
         if provider is None:
+            # Config-driven provider (simulated | twilio | exotel | msg91).
+            # Degrades to simulated when the chosen provider's credentials
+            # are absent, so the platform never falsely reports a real call.
+            from ..core.telephony import build_voice_provider
             log_path = services.settings.resolve_path(
                 os.path.join(services.settings.storage.data_dir, "voice_call_log.jsonl")
             )
-            provider = SimulatedVoiceProvider(log_path)
+            provider = build_voice_provider(services.settings, log_path)
         self.provider = provider
 
     # ---------- gates ----------

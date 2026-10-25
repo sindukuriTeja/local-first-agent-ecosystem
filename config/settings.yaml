@@ -89,6 +89,12 @@ agents:
     agent_15_reporting_analytics: true
     agent_16_voice_notification: true
 
+  # Agent 3: external information fetcher mode.
+  #   cache = offline, serve from data/external_cache.json (default, air-gapped)
+  #   live  = fetch from the allowlisted public sources over HTTP (audited)
+  external:
+    fetcher: "cache"
+
   # Agent 16: voice notification rules (approved message only)
   voice:
     consent_required: true
@@ -98,9 +104,20 @@ agents:
       timezone: "Asia/Calcutta"
     identity_check_required: true
     acknowledgement_required: true
-    # In Phase 1 the actual call is simulated/logged; plug a telephony
-    # provider here later.
+    # Provider: simulated | twilio | exotel | msg91
+    # Real providers require env credentials (TWILIO_*, EXOTEL_*, MSG91_*).
+    # If credentials are missing, it degrades to simulated automatically.
     provider: "simulated"
+
+# Phase 2: self-learning engine (L4). Async, budgeted, reversible.
+learning:
+  enabled: true
+  # Max candidates processed per learning run (job budget).
+  budget_per_run: 10
+  # Minimum hold-out (exam) accuracy a promoted config must meet.
+  min_accuracy: 0.6
+  # Where the Q&A exam set lives (used by the verification gate + regression).
+  exam_path: "data/dataset/exam.json"
 
 orchestrator:
   # Max sequential routing hops before a request is returned with a

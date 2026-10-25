@@ -108,3 +108,65 @@ def test_ingest_endpoint(client, tmp_path):
     body = r.json()
     assert body["status"] == "ok"
     assert body["data"]["doc_id"]
+
+
+# ---------------------------------------------------------------------------
+# Reviewer web UI + Phase 2 endpoints
+# ---------------------------------------------------------------------------
+
+def test_reviewer_page(client):
+    r = client.get("/reviewer")
+    assert r.status_code == 200
+    assert "Reviewer Console" in r.text
+    assert "Self-Learning" in r.text
+    # No external CDN / script src (fully local, self-contained)
+    assert "cdn." not in r.text.lower()
+    assert "<script src" not in r.text
+
+
+def test_documents_endpoint(client):
+    r = client.get("/documents", params={"limit": 50})
+    assert r.status_code == 200
+    docs = r.json()
+    assert isinstance(docs, list)
+    assert len(docs) >= 20  # dataset seeded in the fixture
+    assert all(d["id"] and d["title"] for d in docs)
+
+
+def test_search_endpoint(client):
+    r = client.get("/search", params={"q": "books of account retention"})
+    assert r.status_code == 200
+    results = r.json()
+    assert isinstance(results, list)
+    # Each result carries a score and a record id
+    if results:
+        assert "score" in results[0]
+        assert "id" in results[0]
+
+
+def test_learning_dashboard_endpoint(client):
+    r = client.get("/learning")
+    assert r.status_code == 200
+    body = r.json()
+    assert "total_runs" in body
+    assert "holdout_accuracy" in body
+
+
+def test_learn_endpoint(client):
+    # Generate a couple of trajectories so the run has something to process.
+    for i in range(3):
+        client.post("/ask", json={"user": "admin", "request": f"query {i}"})
+    r = client.post("/learn")
+    assert r.status_code == 200
+    body = r.json()
+    assert "run_id" in body
+    assert "trajectories_processed" in body
+    assert "candidates_mined" in body
+
+
+def test_health_includes_counts(client):
+    r = client.get("/health")
+    body = r.json()
+    assert "pending_approvals" in body
+    assert "documents" in body
+    assert body["documents"] >= 20

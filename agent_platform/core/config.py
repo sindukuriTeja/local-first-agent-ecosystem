@@ -75,6 +75,19 @@ class VoiceConfig:
 
 
 @dataclass
+class ExternalConfig:
+    fetcher: str = "cache"  # cache | live
+
+
+@dataclass
+class LearningConfig:
+    enabled: bool = True
+    budget_per_run: int = 10
+    min_accuracy: float = 0.6
+    exam_path: str = "data/dataset/exam.json"
+
+
+@dataclass
 class Settings:
     platform_name: str = "Local-First Agent Ecosystem"
     phase: int = 1
@@ -85,6 +98,8 @@ class Settings:
     policy: PolicyConfig = field(default_factory=PolicyConfig)
     agents_enabled: Dict[str, bool] = field(default_factory=dict)
     voice: VoiceConfig = field(default_factory=VoiceConfig)
+    external: ExternalConfig = field(default_factory=ExternalConfig)
+    learning: LearningConfig = field(default_factory=LearningConfig)
     orchestrator_max_hops: int = 8
     orchestrator_allow_parallel: bool = False
     project_root: str = "."
@@ -115,6 +130,8 @@ def _build(data: Dict[str, Any], project_root: str) -> Settings:
     p = data.get("policy", {}) or {}
     a = data.get("agents", {}) or {}
     v = (a.get("voice") or {})
+    ext = (a.get("external") or {})
+    learn = data.get("learning", {}) or {}
     orch = data.get("orchestrator", {}) or {}
     plat = data.get("platform", {}) or {}
 
@@ -164,6 +181,13 @@ def _build(data: Dict[str, Any], project_root: str) -> Settings:
             identity_check_required=bool(v.get("identity_check_required", True)),
             acknowledgement_required=bool(v.get("acknowledgement_required", True)),
             provider=v.get("provider", "simulated"),
+        ),
+        external=ExternalConfig(fetcher=ext.get("fetcher", "cache")),
+        learning=LearningConfig(
+            enabled=bool(learn.get("enabled", True)),
+            budget_per_run=int(learn.get("budget_per_run", 10)),
+            min_accuracy=float(learn.get("min_accuracy", 0.6)),
+            exam_path=learn.get("exam_path", "data/dataset/exam.json"),
         ),
         orchestrator_max_hops=int(orch.get("max_hops", 8)),
         orchestrator_allow_parallel=bool(orch.get("allow_parallel", False)),

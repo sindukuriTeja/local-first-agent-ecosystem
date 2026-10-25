@@ -188,17 +188,32 @@ def platform(tmp_path):
             "voice_roles": ["admin", "reviewer"],
             "permitted_external_sources": ["https://www.indiacode.nic.in"],
         },
-        "agents": {"enabled": {}},
+        "agents": {
+            "enabled": {},
+            "external": {"fetcher": "cache"},
+            "voice": {"provider": "simulated"},
+        },
+        "learning": {"enabled": True, "budget_per_run": 10,
+                     "min_accuracy": 0.6,
+                     "exam_path": str(tmp_path / "dataset" / "exam.json")},
         "orchestrator": {"max_hops": 8, "allow_parallel": False},
     }
     config_path = tmp_path / "settings.yaml"
     with open(config_path, "w") as f:
         yaml.safe_dump(config, f)
 
-    p = create_platform(config_path=str(config_path),
-                        ollama_client=_mock_client(tmp_path))
+    # Generate the synthetic dataset into the temp dir and point the
+    # learning engine's exam at it.
+    dataset_dir = tmp_path / "dataset"
+    from scripts.generate_dataset import generate as _gen
+    _gen(str(dataset_dir), seed=42)
 
-    # Seed the knowledge store
+    p = create_platform(config_path=str(config_path),
+                        ollama_client=_mock_client(tmp_path),
+                        enable_learning=True,
+                        dataset_dir=str(dataset_dir))
+
+    # Also seed a simple matter doc for the Phase 1 retrieval tests.
     p.knowledge.add_document(
         title="Seed Matter Document",
         content=("Matter M-100 is active. The client is TestCorp Ltd. "

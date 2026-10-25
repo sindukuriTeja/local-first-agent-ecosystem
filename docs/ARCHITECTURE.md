@@ -1,4 +1,4 @@
-# Architecture Reference — Phase 1
+# Architecture Reference — Phase 1 + 2
 
 This document maps the **Phase 1 architecture diagram** ("AI Agent Platform —
 Phase 1 Architecture Design") to the implementation in this repository, and
@@ -160,17 +160,15 @@ can override at ingest time.
 ## 9. Relationship to the full ecosystem
 
 Phase 1 implements the **operating platform** (agents, knowledge,
-governance). The layers from the complete ecosystem diagram that are
-**scaffolded but not yet active**:
+governance). Phase 2 activates the **L4 learning engine** and the
+**egress/telephony** layers. See §11 for the Phase 2 design.
 
-- **L4 Learning Engine** — the trajectory store (audit log + episodic
-  memory) already captures task traces; the insight miner, verification
-  gate, and model-promotion pipeline are the next phase. The
-  `ModelRegistry` is already versioned and promotion-ready.
-- **Air-gap switch** — Phase 1 is air-gapped by default (no fetcher
-  network access). The egress gateway is the allowlist + audit in Agent 3.
-- **Evaluation dashboard** — the audit log + approval history are the raw
-  inputs; a dashboard is a later phase.
+- **L4 Learning Engine** — *now active* (Phase 2). See §11.
+- **Air-gap switch** — air-gapped by default (`agents.external.fetcher:
+  cache`). Setting it to `live` opens the allowlisted egress gateway in
+  Agent 3, with every request audit-logged.
+- **Evaluation dashboard** — *now active* (Phase 2). `GET /learning`,
+  `cli learning`, and the Self-Learning tab of the reviewer UI.
 
 ## 10. Extending the platform
 
@@ -182,7 +180,118 @@ governance). The layers from the complete ecosystem diagram that are
   reasoning-heavy agents).
 - **Real OCR**: pass an `ocr_fn` to `DocumentIntakeOcrAgent` (e.g.
   Tesseract) or install `pytesseract` + `Pillow`.
-- **Real telephony**: implement `VoiceProvider` and pass it to
-  `VoiceNotificationAgent`.
-- **Live egress**: implement `BaseFetcher` in Agent 3 with a proper reader
-  against the allowlisted domains.
+- **Real telephony**: *done in Phase 2* — `core/telephony.py` ships
+  `TwilioProvider`, `ExotelProvider`, `MSG91Provider` plus a
+  `build_voice_provider` factory. Set `agents.voice.provider` and the
+  matching env vars (`TWILIO_*`, `EXOTEL_*`, `MSG91_*`); it degrades to
+  simulated when unconfigured. To add another carrier, implement the
+  `VoiceProvider` interface and register it in the factory.
+- **Live egress**: *done in Phase 2* — `core/web_fetcher.py` ships
+  `LiveWebFetcher` (allowlisted, audited HTTP) alongside the offline
+  `LocalCacheFetcher`. `build_fetcher` picks from
+  `agents.external.fetcher`. To add a source, extend the allowlist in
+  `policy.permitted_external_sources`.
+
+## 11. Phase 2 — self-learning engine, egress, telephony, reviewer UI
+
+### 11.1 Self-learning loop (L4)
+
+```
+  every handle_request()
+        │  (anonymized: PII stripped)
+        ▼
+  TrajectoryStore (data/trajectories.jsonl)
+        │
+        │  learn() / POST /learn / cli learn   (budgeted, async)
+        ▼
+  InsightMiner ── mines candidate insights/skills from recurring
+        │          patterns (recurring abstains, recurring success
+        │          sequences, user feedback)
+        ▼
+  VerificationGate
+        │   1. REPLAY   — re-run the trajectories the candidate came from
+        │   2. HOLD-OUT — score against the Q&A exam set (ground truth)
+        │   3. REVIEW   — human approve / reject / edit (audited)
+        ▼
+  RegressionHarness — candidate accuracy must not drop below baseline
+        │              (min_accuracy floor, e.g. 0.6)
+        ▼
+  reversible promotion ──> Memory (semantic/procedural) + ModelRegistry
+        │
+        ▼
+  MemoryConsolidator — dedupe / decay / re-activate (keeps memory clean)
+```
+
+**Safety properties**
+
+- **Budgeted** — `learning.budget_per_run` caps candidates per run; the
+  job never blocks user work or burns unbounded compute.
+- **Verified** — a candidate is promoted only if it passes replay,
+  hold-out, and the regression harness. A candidate that regresses the
+  exam set is rejected and the current model is kept.
+- **Reversible** — promotions are stored as durable memory with
+  provenance (the trajectories they came from), so any promotion can be
+  traced and rolled back.
+- **Audited** — every mine/verify/reject/promote step is written to the
+  append-only audit log.
+- **PII-safe** — trajectories are anonymized (phones, emails, matter
+  ids, amounts) before they are stored.
+
+**The grounded answerer** (`learning/answerer.py`) is the "current
+model" the gate scores: it retrieves from the knowledge store and answers
+with the local model, exactly like the agents do. If Ollama is offline it
+falls back to a deterministic lexical score, so the eval loop (and tests)
+run without a model.
+
+### 11.2 Live egress (Agent 3)
+
+`core/web_fetcher.py` provides two fetchers behind `build_fetcher`:
+
+- **`LocalCacheFetcher`** (default, `fetcher: cache`) — serves pre-approved
+  public documents from `data/external_cache.json`. Fully offline.
+- **`LiveWebFetcher`** (`fetcher: live`) — fetches from the
+  `policy.permitted_external_sources` allowlist over HTTP. Every request
+  is audit-logged (actor `agent_3_external_information`, action
+  `live_fetch`). Non-allowlisted URLs are blocked; a failed fetch returns
+  an empty result (never raises into the request path).
+
+### 11.3 Telephony (Agent 16)
+
+`core/telephony.py` ships a `VoiceProvider` interface with four
+implementations, selected by `agents.voice.provider`:
+
+| Provider | Env vars | Notes |
+|---|---|---|
+| `simulated` (default) | — | Logs the call; no network. |
+| `twilio` | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | Twilio Voice API. |
+| `exotel` | `EXOTEL_ACCOUNT_ID`, `EXOTEL_AUTH_KEY`, `EXOTEL_FROM_NUMBER` | Exotel (India) voice API. |
+| `msg91` | `MSG91_AUTH_KEY` | MSG91 voice API. |
+
+`build_voice_provider` returns the configured provider, or degrades to
+simulated when credentials are missing — so a misconfigured deployment
+never crashes, it just logs.
+
+### 11.4 Reviewer web UI
+
+`reviewer.py` serves a **self-contained** single-page dashboard at
+`GET /reviewer` (no build step, no CDN, no external scripts). Tabs:
+
+- **Overview** — platform health, agent list, pending-approval / document /
+  learning-run counts.
+- **Approvals** — list pending approvals; approve / reject / correct with a
+  note (role-checked server-side via the existing approval gate).
+- **Documents** — list + search the knowledge store (hybrid retrieval).
+- **Audit** — filter the append-only audit log by actor / action / user.
+- **Self-Learning** — learning dashboard (runs, hold-out accuracy,
+  promotions) and a button to trigger a budgeted `POST /learn` run.
+
+It is a thin presentation layer over the same REST endpoints the API/CLI
+use, so the governance surface is identical regardless of entry point.
+
+### 11.5 Synthetic dataset
+
+`scripts/generate_dataset.py` deterministically generates (seeded) a
+realistic legal/compliance corpus: statutes, judgments, tax notices, land
+parcels, debt facilities, matters, entities, external docs, and a Q&A
+**exam set**. The documents seed the knowledge store (`seed_dataset`) and
+the exam set gates the learning engine (`learning.exam_path`).

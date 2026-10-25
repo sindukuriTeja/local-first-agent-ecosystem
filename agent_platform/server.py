@@ -30,9 +30,11 @@ except ImportError as e:  # pragma: no cover
     ) from e
 
 from .platform import create_platform
+from .reviewer import make_reviewer_routes
 
-app = FastAPI(title="Local-First Agent Ecosystem — Phase 1",
-              description="16-agent legal/compliance platform, local Ollama inference.")
+app = FastAPI(title="Local-First Agent Ecosystem — Phase 1+2",
+              description="16-agent legal/compliance platform, local Ollama inference, "
+                          "self-learning engine, reviewer UI.")
 
 # Lazily-created platform (so import works without Ollama running)
 _platform = None
@@ -70,6 +72,8 @@ def health():
         "ollama_available": p.services.ollama.is_available(),
         "default_model": p.settings.ollama.default_model,
         "agents": len(p.agents),
+        "pending_approvals": len(p.pending_approvals()),
+        "documents": len(p.knowledge.list_documents(limit=10000)),
     }
 
 
@@ -157,6 +161,11 @@ def audit(actor: Optional[str] = None, action: Optional[str] = None,
           user: Optional[str] = None, limit: int = 100):
     p = get_platform()
     return p.audit_query(actor, action, user, limit)
+
+
+# Reviewer web UI + the extra endpoints it needs (/reviewer, /documents,
+# /search, /learning, /learn).
+make_reviewer_routes(app, get_platform)
 
 
 def run(host: str = "127.0.0.1", port: int = 8000):

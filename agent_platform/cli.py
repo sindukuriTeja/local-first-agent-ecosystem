@@ -38,7 +38,7 @@ def _print_result(result) -> None:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="agent-platform",
-        description="Local-First Agent Ecosystem — Phase 1 CLI",
+        description="Local-First Agent Ecosystem — Phase 1+2 CLI",
     )
     parser.add_argument("--config", default=None, help="path to settings.yaml")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -80,6 +80,16 @@ def main(argv=None) -> int:
     p_audit.add_argument("--action", default=None)
     p_audit.add_argument("--user", default=None)
     p_audit.add_argument("--limit", type=int, default=50)
+
+    # learn (Phase 2: self-learning)
+    sub.add_parser("learn", help="run one budgeted self-learning pass")
+    sub.add_parser("learning", help="show the self-learning dashboard")
+
+    # reviewer (Phase 2: web UI)
+    p_rev = sub.add_parser("reviewer", help="open the reviewer web UI")
+    p_rev.add_argument("--port", type=int, default=8000)
+    p_rev.add_argument("--open", action="store_true",
+                       help="open the browser after starting")
 
     args = parser.parse_args(argv)
 
@@ -149,9 +159,54 @@ def main(argv=None) -> int:
                 print(json.dumps(e, ensure_ascii=False))
             return 0
 
+        if args.cmd == "learn":
+            report = platform.learn()
+            if "error" in report:
+                print(f"Learning: {report['error']}", file=sys.stderr)
+                return 1
+            print(f"\n=== Learning run {report['run_id']} ===")
+            print(f"  trajectories processed : {report['trajectories_processed']}")
+            print(f"  candidates mined       : {report['candidates_mined']}")
+            print(f"  verified passed        : {report['verified_passed']}")
+            print(f"  regression passed      : {report['regression_passed']}")
+            print(f"  promoted               : {report['promoted']}")
+            print(f"  rejected               : {report['rejected']}")
+            print(f"  budget used            : {report['budget_used']}/{report['budget_limit']}")
+            print(f"  hold-out accuracy      : {report['holdout_accuracy']:.2%}")
+            for n in report["notes"]:
+                print(f"  · {n}")
+            return 0
+
+        if args.cmd == "learning":
+            dash = platform.learning_dashboard()
+            if "error" in dash:
+                print(f"Learning: {dash['error']}", file=sys.stderr)
+                return 1
+            print(json.dumps(dash, indent=2, ensure_ascii=False))
+            return 0
+
         return 0
     finally:
         platform.close()
+
+
+def _run_reviewer(args) -> int:
+    """Start the FastAPI server and (optionally) open the reviewer UI."""
+    try:
+        import uvicorn
+    except ImportError:
+        print("uvicorn is required: pip install fastapi uvicorn python-multipart",
+              file=sys.stderr)
+        return 2
+    url = f"http://127.0.0.1:{args.port}/reviewer"
+    print(f"Starting reviewer console at {url}  (Ctrl-C to stop)")
+    if args.open:
+        import threading
+        import webbrowser
+        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
+    from .server import app
+    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
+    return 0
 
 
 if __name__ == "__main__":
