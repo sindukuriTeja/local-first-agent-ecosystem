@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Local data (knowledge store, documents, audit log, memory)
+data/*
+!data/external_cache.example.json
+*.db
+*.jsonl
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
