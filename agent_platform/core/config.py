@@ -85,6 +85,9 @@ class LearningConfig:
     budget_per_run: int = 10
     min_accuracy: float = 0.6
     exam_path: str = "data/dataset/exam.json"
+    # When True, verified candidates are queued for an explicit human
+    # review (scheduler.review) instead of being auto-promoted.
+    require_human_review: bool = False
 
 
 @dataclass
@@ -188,6 +191,7 @@ def _build(data: Dict[str, Any], project_root: str) -> Settings:
             budget_per_run=int(learn.get("budget_per_run", 10)),
             min_accuracy=float(learn.get("min_accuracy", 0.6)),
             exam_path=learn.get("exam_path", "data/dataset/exam.json"),
+            require_human_review=bool(learn.get("require_human_review", False)),
         ),
         orchestrator_max_hops=int(orch.get("max_hops", 8)),
         orchestrator_allow_parallel=bool(orch.get("allow_parallel", False)),

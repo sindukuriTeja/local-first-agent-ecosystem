@@ -26,6 +26,14 @@ def _client_platform(client):
     return client.platform
 
 
+def _login(client, username="admin", password="admin123"):
+    """Log in and return an Authorization header for the reviewer routes."""
+    r = client.post("/api/auth/login",
+                    json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return {"Authorization": "Bearer " + r.json()["token"]}
+
+
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
@@ -128,7 +136,7 @@ def test_reviewer_page(client):
 
 
 def test_documents_endpoint(client):
-    r = client.get("/documents", params={"limit": 50})
+    r = client.get("/documents", params={"limit": 50}, headers=_login(client))
     assert r.status_code == 200
     docs = r.json()
     assert isinstance(docs, list)
@@ -137,7 +145,8 @@ def test_documents_endpoint(client):
 
 
 def test_search_endpoint(client):
-    r = client.get("/search", params={"q": "books of account retention"})
+    r = client.get("/search", params={"q": "books of account retention"},
+                   headers=_login(client))
     assert r.status_code == 200
     results = r.json()
     assert isinstance(results, list)
@@ -148,7 +157,7 @@ def test_search_endpoint(client):
 
 
 def test_learning_dashboard_endpoint(client):
-    r = client.get("/learning")
+    r = client.get("/learning", headers=_login(client))
     assert r.status_code == 200
     body = r.json()
     assert "total_runs" in body
@@ -159,12 +168,40 @@ def test_learn_endpoint(client):
     # Generate a couple of trajectories so the run has something to process.
     for i in range(3):
         client.post("/ask", json={"user": "admin", "request": f"query {i}"})
-    r = client.post("/learn")
+    r = client.post("/learn", headers=_login(client))
     assert r.status_code == 200
     body = r.json()
     assert "run_id" in body
     assert "trajectories_processed" in body
     assert "candidates_mined" in body
+
+
+# ---------------------------------------------------------------------------
+# Reviewer console access control (Phase 2 hardening)
+# ---------------------------------------------------------------------------
+
+def test_reviewer_routes_require_auth(client):
+    # Unauthenticated data calls are rejected before any data is exposed.
+    for method, path in [("get", "/documents"), ("get", "/learning"),
+                         ("get", "/search?q=x"), ("post", "/learn")]:
+        r = client.request(method, path)
+        assert r.status_code == 401, (path, r.status_code)
+
+
+def test_reviewer_routes_forbid_non_approvers(client):
+    # A valid session with a non-approver role (employee) is still rejected.
+    h = _login(client, "employee1", "employee123")
+    r = client.get("/documents", headers=h)
+    assert r.status_code == 403
+    r = client.post("/learn", headers=h)
+    assert r.status_code == 403
+
+
+def test_reviewer_page_stays_open(client):
+    # The page itself must render (so the login form shows) without a token.
+    r = client.get("/reviewer")
+    assert r.status_code == 200
+    assert "Reviewer Console" in r.text
 
 
 def test_health_includes_counts(client):

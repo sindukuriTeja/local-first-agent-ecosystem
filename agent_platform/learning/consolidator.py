@@ -12,9 +12,8 @@ marks entries `decayed` rather than deleting, so they can be restored.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from dataclasses import dataclass, field
+from typing import List
 
 from ..core.memory import MemorySystem
 
@@ -25,7 +24,9 @@ class ConsolidationReport:
     decayed: int = 0
     pruned: int = 0
     reindexed: int = 0
-    notes: List[str] = None
+    # NOTE: must use field(default_factory=list) — a bare `= None` default
+    # (or a mutable default) is a latent bug here.
+    notes: List[str] = field(default_factory=list)
 
 
 class MemoryConsolidator:
@@ -46,33 +47,38 @@ class MemoryConsolidator:
             report.notes.append(f"No active {kind} entries to consolidate.")
             return report
 
-        # 1. Merge near-duplicates (by normalized content prefix)
+        # 1. Merge near-duplicates (by normalized content prefix) — keep
+        #    the first occurrence, mark the rest decayed.
         seen: Dict[str, str] = {}
-        to_decay = []
+        dup_ids: List[str] = []
         for e in entries:
             key = self._norm_key(e.content)
             if key in seen:
-                to_decay.append(e.id)
+                dup_ids.append(e.id)
                 report.merged += 1
             else:
                 seen[key] = e.id
 
-        # 2. Decay old, low-confidence entries
-        now = datetime.now(timezone.utc)
+        # 2. Prune low-confidence entries (below the floor).
+        low_conf_ids: List[str] = []
         for e in entries:
-            if e.confidence < self.prune_floor:
-                to_decay.append(e.id)
-                report.decayed += 1
+            if e.confidence < self.prune_floor and e.id not in dup_ids:
+                low_conf_ids.append(e.id)
+                report.pruned += 1
 
-        # Apply decay by rejecting duplicates (keeps the first) and
-        # decaying below-floor entries. (MemorySystem stores are append-
-        # only; we mark status to prune.)
-        for eid in set(to_decay):
+        # Apply by marking status (MemorySystem stores are append-only;
+        # marking keeps the operation reversible — a decayed entry can be
+        # re-activated).
+        for eid in set(dup_ids):
             self.memory._set_status(eid, kind, "decayed")
+            report.decayed += 1
+        for eid in low_conf_ids:
+            self.memory._set_status(eid, kind, "decayed")
+            report.decayed += 1
 
         report.notes.append(
             f"Consolidated {kind}: merged {report.merged}, "
-            f"decayed {report.decayed}."
+            f"pruned {report.pruned}, decayed {report.decayed}."
         )
         if self.audit:
             self.audit.record(

@@ -42,6 +42,7 @@ class LearningRunReport:
     regression_passed: int
     promoted: int
     rejected: int
+    pending_review: int
     budget_used: int
     budget_limit: int
     holdout_accuracy: float
@@ -67,6 +68,7 @@ class LearningScheduler:
         budget_per_run: int = 10,
         min_accuracy: float = 0.6,
         state_path: str = "data/learning_state.json",
+        require_human_review: bool = False,
     ):
         self.trajectories = trajectory_store
         self.miner = miner
@@ -79,6 +81,11 @@ class LearningScheduler:
         self.budget_per_run = budget_per_run
         self.min_accuracy = min_accuracy
         self.state_path = state_path
+        # When True, a candidate that passes verification + regression is
+        # NOT auto-promoted; it is queued for an explicit human review
+        # (see `review`). This is the "review" gate of the verification
+        # pipeline, wired into the promotion path.
+        self.require_human_review = require_human_review
         self._state = self._load_state()
 
     # ---------- state ----------
@@ -128,7 +135,7 @@ class LearningScheduler:
 
         if not new_trajs:
             notes.append("No new trajectories since last run.")
-            report = self._finalize(run_id, started, 0, 0, 0, 0, 0, 0,
+            report = self._finalize(run_id, started, 0, 0, 0, 0, 0, 0, 0,
                                     self.verification.score_holdout(baseline_answer_fn),
                                     notes)
             return report
@@ -142,6 +149,7 @@ class LearningScheduler:
         regression_passed = 0
         promoted = 0
         rejected = 0
+        pending_review = 0
         budget_used = 0
 
         for cand in candidates:
@@ -176,6 +184,26 @@ class LearningScheduler:
                 continue
             regression_passed += 1
 
+            # Human-review gate (optional): if enabled, verified candidates
+            # are queued for explicit review instead of auto-promoting.
+            if self.require_human_review:
+                cand.status = "verified"
+                self._state.setdefault("pending_reviews", []).append(
+                    cand.to_dict())
+                self._state["pending_reviews"] = \
+                    self._state["pending_reviews"][-50:]
+                pending_review += 1
+                if self.audit:
+                    self.audit.record(
+                        actor="learning_scheduler",
+                        action="candidate_pending_review",
+                        detail={"candidate_id": cand.id, "kind": cand.kind,
+                                "scope": cand.scope},
+                        result="pending_review",
+                    )
+                notes.append(f"Queued {cand.id} for human review.")
+                continue
+
             # Promote (reversibly) — store as an active skill/fact and
             # register the model spec with provenance.
             cand.status = "promoted"
@@ -192,7 +220,7 @@ class LearningScheduler:
         report = self._finalize(run_id, started, len(new_trajs),
                                 len(candidates), verified_passed,
                                 regression_passed, promoted, rejected,
-                                holdout, notes, budget_used)
+                                pending_review, holdout, notes, budget_used)
         self._state["runs"].append(report.to_dict())
         self._state["runs"] = self._state["runs"][-50:]  # keep last 50
         self._save_state()
@@ -241,8 +269,61 @@ class LearningScheduler:
                 result=cand.status,
             )
 
+    # ---------- human review gate ----------
+
+    def pending_reviews(self) -> List[Dict[str, Any]]:
+        """Candidates that passed verification + regression and are waiting
+        for an explicit human decision (only populated when
+        `require_human_review` is set)."""
+        return list(self._state.get("pending_reviews", []))
+
+    def review(self, candidate_id: str, decision: str,
+               reviewer: str = "reviewer") -> bool:
+        """Record a human review decision for a queued candidate.
+
+        `decision` is one of `approved` | `rejected` | `edited`.
+        `approved` (or `edited`) promotes the candidate now; `rejected`
+        marks it rejected. Returns True if the candidate was found.
+        """
+        if decision not in ("approved", "rejected", "edited"):
+            raise ValueError("decision must be approved | rejected | edited")
+        queue = self._state.get("pending_reviews", [])
+        target = next((c for c in queue if c.get("id") == candidate_id), None)
+        if target is None:
+            return False
+        queue.remove(target)
+        self._state["pending_reviews"] = queue
+        cand = CandidateInsight(
+            id=target.get("id", candidate_id),
+            kind=target.get("kind", "fact"),
+            statement=target.get("statement", ""),
+            scope=target.get("scope", "general"),
+            provenance=list(target.get("provenance", [])),
+            confidence=float(target.get("confidence", 0.5)),
+            version=int(target.get("version", 1)),
+            status=target.get("status", "verified"),
+            created_at=target.get("created_at", ""),
+        )
+        if decision == "rejected":
+            cand.status = "rejected"
+            self._persist_candidate(cand)
+        else:
+            cand.status = "promoted"
+            self._promote(cand)
+        if self.audit:
+            self.audit.record(
+                actor="learning_scheduler",
+                action=f"review_{decision}",
+                detail={"candidate_id": candidate_id, "kind": cand.kind,
+                        "scope": cand.scope},
+                user=reviewer, result=decision,
+            )
+        self._save_state()
+        return True
+
     def _finalize(self, run_id, started, trajs, mined, verified, reg,
-                  promoted, rejected, holdout, notes, budget_used=0) -> LearningRunReport:
+                  promoted, rejected, pending_review, holdout, notes,
+                  budget_used=0) -> LearningRunReport:
         return LearningRunReport(
             run_id=run_id,
             trajectories_processed=trajs,
@@ -251,6 +332,7 @@ class LearningScheduler:
             regression_passed=reg,
             promoted=promoted,
             rejected=rejected,
+            pending_review=pending_review,
             budget_used=budget_used,
             budget_limit=self.budget_per_run,
             holdout_accuracy=round(holdout, 4),
@@ -275,4 +357,6 @@ class LearningScheduler:
                                  if runs else None),
             "budget_per_run": self.budget_per_run,
             "min_accuracy": self.min_accuracy,
+            "require_human_review": self.require_human_review,
+            "pending_reviews": self.pending_reviews(),
         }

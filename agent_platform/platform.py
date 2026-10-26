@@ -197,6 +197,23 @@ class Platform:
             return {"error": "learning engine not wired."}
         return self.learning_scheduler.dashboard()
 
+    def review_learning_candidate(self, candidate_id: str, decision: str,
+                                  decided_by: str = "reviewer") -> bool:
+        """Record a human review decision for a learning candidate that
+        passed verification + regression (only used when
+        `learning.require_human_review` is enabled). `decision` is
+        approved | rejected | edited."""
+        if self.learning_scheduler is None:
+            raise PermissionError("learning engine not wired.")
+        identity = self.identify(decided_by)
+        if identity is None:
+            raise PermissionError(f"Unknown user '{decided_by}'.")
+        if not self.policy.can_approve(identity):
+            raise PermissionError(
+                f"Role '{identity.role}' is not an approver.")
+        return self.learning_scheduler.review(candidate_id, decision,
+                                              reviewer=decided_by)
+
     def seed_dataset(self, dataset_dir: str) -> int:
         """Load a generated dataset (documents.json) into the knowledge
         store. Returns the number of documents added. Idempotent-ish:
@@ -403,6 +420,7 @@ def _wire_learning_engine(platform: Platform, settings: Settings,
         budget_per_run=settings.learning.budget_per_run,
         min_accuracy=settings.learning.min_accuracy,
         state_path=state_path,
+        require_human_review=settings.learning.require_human_review,
     )
 
     platform.trajectory_store = traj_store

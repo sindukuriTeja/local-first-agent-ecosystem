@@ -13,12 +13,28 @@ It is backed entirely by the existing REST endpoints, so it is a thin
 presentation layer over the same governance surface the API/CLI use.
 The page is served locally (127.0.0.1) and requires no build step or
 external CDN — everything is inline.
+
+**Access control:** the console is a privileged governance surface (it
+exposes full document contents, the audit log, approval decisions, and
+learning controls). It therefore requires a valid session token, and the
+data routes are restricted to approver roles (admin / manager / reviewer /
+counsel). The page itself is open so the login form can render; all data
+calls carry the bearer token and are rejected (401/403) otherwise.
 """
 
 from __future__ import annotations
 
-from fastapi import Request
+from typing import Optional
+
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+
+
+class LearningReviewRequest(BaseModel):
+    candidate_id: str
+    decision: str  # approved | rejected | edited
+    user: Optional[str] = None
 
 _PAGE = """<!doctype html>
 <html lang="en">
@@ -116,9 +132,44 @@ _PAGE = """<!doctype html>
               padding: 12px; background: var(--panel2); border-radius: 8px; }
   .detail { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
   a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  /* login overlay */
+  .login-overlay { position: fixed; inset: 0; background: var(--bg);
+                   display: grid; place-items: center; z-index: 100; }
+  .login-card { background: var(--panel); border: 1px solid var(--line);
+                border-radius: 14px; padding: 28px; width: 340px;
+                display: flex; flex-direction: column; gap: 12px; }
+  .login-card .logo { width: 40px; height: 40px; border-radius: 10px;
+                background: linear-gradient(135deg, var(--accent), var(--accent2));
+                display: grid; place-items: center; font-weight: 800; color: #fff; font-size: 18px; }
+  .login-card h1 { font-size: 17px; margin: 0; }
+  .login-card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 6px; }
+  .login-card input { width: 100%; }
+  .login-card .btn { width: 100%; padding: 10px; }
+  .demo-hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .demo-logins { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .demo-btn { background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+              border-radius: 8px; padding: 7px 9px; font-size: 12px; cursor: pointer; text-align: left; }
+  .demo-btn:hover { border-color: var(--accent); }
+  .demo-btn .dname { font-weight: 600; } .demo-btn .dcred { color: var(--muted); font-size: 11px; }
 </style>
 </head>
 <body>
+<!-- LOGIN OVERLAY (shown until a valid approver session is established) -->
+<div id="login-overlay" class="login-overlay" style="display:none">
+  <div class="login-card">
+    <div class="logo">L</div>
+    <h1>Reviewer Console</h1>
+    <div class="sub">Sign in with a reviewer / admin account</div>
+    <form id="login-form">
+      <input id="login-user" placeholder="username" autocomplete="username" style="margin-bottom:10px" />
+      <input id="login-pass" type="password" placeholder="password" autocomplete="current-password" style="margin-bottom:12px" />
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+    <div class="demo-hint">Demo logins (approver roles):</div>
+    <div id="demo-logins" class="demo-logins"></div>
+  </div>
+</div>
+
 <header>
   <div class="logo">L</div>
   <div>
@@ -128,6 +179,8 @@ _PAGE = """<!doctype html>
   <div class="spacer"></div>
   <span class="pill" id="health-pill">…</span>
   <span class="pill" id="model-pill">…</span>
+  <span class="pill" id="user-pill" style="display:none"></span>
+  <button class="btn ghost" id="logout-btn" style="display:none" onclick="doLogout()">Sign out</button>
 </header>
 <nav id="nav">
   <button data-view="overview" class="active">Overview</button>
@@ -152,7 +205,6 @@ _PAGE = """<!doctype html>
       <div class="toolbar">
         <h2 style="margin:0">Pending approvals</h2>
         <div class="grow"></div>
-        <select id="ap-user"></select>
         <button class="btn ghost" onclick="loadApprovals()">Refresh</button>
       </div>
       <div id="ap-list"></div>
@@ -204,6 +256,10 @@ _PAGE = """<!doctype html>
       </div>
       <div id="learn-report" class="muted">No run yet in this session.</div>
       <div class="detail">
+        <h2>Pending human review</h2>
+        <div id="learn-pending"></div>
+      </div>
+      <div class="detail">
         <h2>Recent promotions</h2>
         <div id="learn-promos"></div>
       </div>
@@ -215,7 +271,11 @@ _PAGE = """<!doctype html>
 <script>
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
-let state = { approvals: [], docs: [], audit: [] };
+const TOKEN_KEY = 'lfae_reviewer_token';
+let state = { approvals: [], docs: [], audit: [], me: null };
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function setToken(t) { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); }
 
 function toast(msg, kind) {
   const t = $('#toast'); t.textContent = msg;
@@ -233,14 +293,93 @@ function statusTag(s) {
   return tag(s, map[s] || '');
 }
 
+// All data calls carry the bearer token. On 401 we drop the token and
+// re-show the login screen; on 403 the user is not an approver.
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  opts = opts || {};
+  const headers = Object.assign({}, opts.headers || {});
+  if (getToken()) headers['Authorization'] = 'Bearer ' + getToken();
+  const r = await fetch(path, Object.assign({}, opts, { headers }));
+  if (r.status === 401) { setToken(null); showLogin(); throw new Error('not authenticated'); }
+  if (r.status === 403) { let d=''; try { d=(await r.json()).detail; } catch(e){}
+    throw new Error(d || 'forbidden'); }
   if (!r.ok) { let d=''; try { d=(await r.json()).detail || JSON.stringify(await r.json()); } catch(e){ d=r.statusText; }
     throw new Error(d || r.status); }
   return r.json();
 }
 const post = (path, body) => api(path, { method:'POST',
   headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+
+// ---- auth / login ----
+function showLogin() {
+  $('#login-overlay').style.display = 'grid';
+  $('#logout-btn').style.display = 'none';
+  $('#user-pill').style.display = 'none';
+  loadDemoLogins();
+}
+function hideLogin() {
+  $('#login-overlay').style.display = 'none';
+  if (state.me) {
+    $('#user-pill').textContent = state.me.username + ' (' + state.me.role + ')';
+    $('#user-pill').style.display = '';
+    $('#logout-btn').style.display = '';
+  }
+}
+async function loadDemoLogins() {
+  try {
+    const r = await fetch('/api/auth/demo');
+    const d = await r.json();
+    const approver = new Set(['admin','manager','reviewer','counsel']);
+    const box = $('#demo-logins'); box.innerHTML = '';
+    (d.logins || []).forEach(l => {
+      const u = l.username;
+      // only offer approver-role demo accounts to the reviewer console
+      const roleOf = { admin:'admin', manager1:'manager', reviewer:'reviewer',
+                       counsel1:'counsel' }[u];
+      if (!approver.has(roleOf)) return;
+      const b = document.createElement('button');
+      b.className = 'demo-btn'; b.type = 'button';
+      b.innerHTML = `<div class="dname">${esc(l.name)}</div>
+                     <div class="dcred">${esc(u)} / ${esc(l.password)}</div>`;
+      b.onclick = () => { $('#login-user').value = u; $('#login-pass').value = l.password; doLogin(u, l.password); };
+      box.appendChild(b);
+    });
+  } catch(e) { /* demo list is best-effort */ }
+}
+async function doLogin(username, password) {
+  try {
+    const r = await fetch('/api/auth/login', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password }) });
+    if (!r.ok) throw new Error('invalid credentials');
+    const d = await r.json();
+    setToken(d.token);
+    state.me = d.user;
+    hideLogin();
+    enterConsole();
+  } catch(e) { toast('Sign in failed: ' + e.message, 'bad'); }
+}
+function doLogout() {
+  const t = getToken();
+  if (t) fetch('/api/auth/logout', { method:'POST',
+    headers:{'Authorization':'Bearer ' + t} }).catch(()=>{});
+  setToken(null); state.me = null;
+  showLogin();
+}
+async function enterConsole() {
+  // Validate the session and confirm the user is an approver.
+  try {
+    const me = await api('/api/auth/me');
+    state.me = me.user;
+    if (!state.me.can_approve) {
+      setToken(null); showLogin();
+      toast('This console requires a reviewer/admin account.', 'bad');
+      return;
+    }
+    hideLogin();
+    loadOverview(); loadApprovals();
+  } catch(e) { /* 401 already re-shows login */ }
+}
 
 // ---- nav ----
 $$('#nav button').forEach(b => b.onclick = () => {
@@ -280,9 +419,6 @@ async function loadOverview() {
 
 // ---- approvals ----
 async function loadApprovals() {
-  const users = ['reviewer','admin'];
-  const sel = $('#ap-user');
-  if (!sel.options.length) users.forEach(u => sel.add(new Option(u,u)));
   state.approvals = await api('/approvals');
   const c = $('#ap-count'); c.textContent = state.approvals.length ? `(${state.approvals.length})` : '';
   if (!state.approvals.length) { $('#ap-list').innerHTML =
@@ -303,9 +439,11 @@ async function loadApprovals() {
 }
 async function decide(id, decision) {
   const note = prompt('Decision note (optional):', '') || '';
-  const user = $('#ap-user').value;
+  // The decision is attributed to the authenticated session user (the
+  // server re-checks that this role is an approver).
   try {
-    await post('/approvals/decide', { approval_id:id, user, decision, note });
+    await post('/approvals/decide', { approval_id:id, user: state.me.username,
+                                      decision, note });
     toast(`Approval ${id} → ${decision}`, decision==='rejected'?'bad':'ok');
     loadApprovals();
   } catch(e){ toast('Error: '+e.message, 'bad'); }
@@ -377,13 +515,31 @@ async function loadLearning() {
         <div class="k">Notes</div><div class="muted">${esc((last.notes||[]).join(' · '))}</div>
       </div>`;
   }
+  const pending = d.pending_reviews || [];
+  $('#learn-pending').innerHTML = pending.length ?
+    `<table><tr><th>ID</th><th>Kind</th><th>Scope</th><th>Statement</th><th>Decide</th></tr>` +
+    pending.map(p => `<tr><td class="mono">${esc(p.id)}</td>
+      <td>${tag(p.kind,'info')}</td><td class="mono">${esc(p.scope)}</td>
+      <td>${esc(p.statement)}</td>
+      <td><div class="row-actions">
+        <button class="btn ok" onclick="reviewCand('${p.id}','approved')">Approve</button>
+        <button class="btn bad" onclick="reviewCand('${p.id}','rejected')">Reject</button>
+      </div></td></tr>`).join('') + '</table>' :
+    `<div class="empty">No candidates awaiting review.</div>`;
   const promos = d.recent_promotions || [];
   $('#learn-promos').innerHTML = promos.length ?
     `<table><tr><th>ID</th><th>Kind</th><th>Scope</th><th>Statement</th></tr>` +
     promos.map(p => `<tr><td class="mono">${esc(p.candidate_id)}</td>
       <td>${tag(p.kind,'info')}</td><td class="mono">${esc(p.scope)}</td>
-      <td>${esc(p.statement)}</td></tr>`).join('') + '</table>' :
+      <td>${esc(p.statement)}</td></tr>`).join('') :
     `<div class="empty">No promotions yet. Run a learning pass to mine candidates.</div>`;
+}
+async function reviewCand(id, decision) {
+  try {
+    await post('/learn/review', { candidate_id:id, decision, user: state.me.username });
+    toast(`Candidate ${id} → ${decision}`, decision==='rejected'?'bad':'ok');
+    loadLearning();
+  } catch(e){ toast('Error: '+e.message, 'bad'); }
 }
 async function runLearn() {
   const btn = $('#learn-btn'); btn.disabled = true; btn.textContent = 'Running…';
@@ -397,8 +553,16 @@ async function runLearn() {
 }
 
 // ---- init ----
-loadOverview();
-loadApprovals();
+(async function init() {
+  if (getToken()) {
+    try {
+      const me = await api('/api/auth/me');
+      state.me = me.user;
+      if (state.me.can_approve) { hideLogin(); enterConsole(); return; }
+    } catch(e) { /* fall through to login */ }
+  }
+  showLogin();
+})();
 </script>
 </body>
 </html>
@@ -412,22 +576,43 @@ def reviewer_page() -> HTMLResponse:
 def make_reviewer_routes(app, get_platform):
     """Register the reviewer page + the small extra endpoints the UI needs.
 
-    - GET  /reviewer          the dashboard page
-    - GET  /documents         list knowledge-store documents
-    - GET  /search            hybrid retrieval (used by the doc search box)
-    - GET  /learning          learning dashboard
-    - POST /learn             trigger a budgeted learning pass
+    - GET  /reviewer          the dashboard page (open; shows the login form)
+    - GET  /documents         list knowledge-store documents   (auth + approver)
+    - GET  /search            hybrid retrieval (doc search box) (auth + approver)
+    - GET  /learning          learning dashboard                (auth + approver)
+    - POST /learn             trigger a budgeted learning pass  (auth + approver)
+    - POST /learn/review      decide a pending learning candidate (auth + approver)
 
-    `get_platform` is the server's lazy platform factory, so the routes
-    work even before the first request has built the platform.
+    The data routes require a valid session token AND an approver role
+    (admin / manager / reviewer / counsel), because the console exposes
+    full document contents, the audit log, approval decisions, and
+    learning controls. `get_platform` is the server's lazy platform
+    factory, so the routes work even before the first request.
     """
+
+    def _current_user(authorization: Optional[str] = Header(default=None)):
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise HTTPException(status_code=401, detail="missing bearer token")
+        token = authorization.split(" ", 1)[1].strip()
+        p = get_platform()
+        user = p.auth.user_for_token(token)
+        if user is None:
+            raise HTTPException(status_code=401, detail="invalid or expired session")
+        if not user.can_approve:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Role '{user.role}' is not authorized for the reviewer console.",
+            )
+        return user
+
     @app.get("/reviewer", response_class=HTMLResponse)
     def _reviewer(request: Request):
         get_platform()  # ensure the platform is built
         return reviewer_page()
 
     @app.get("/documents")
-    def _documents(sensitivity_max: str = "restricted", limit: int = 100):
+    def _documents(user=Depends(_current_user),
+                   sensitivity_max: str = "restricted", limit: int = 100):
         p = get_platform()
         return [
             {
@@ -441,7 +626,8 @@ def make_reviewer_routes(app, get_platform):
         ]
 
     @app.get("/search")
-    def _search(q: str, sensitivity_max: str = "restricted", top_k: int = 12):
+    def _search(user=Depends(_current_user), q: str = "",
+                sensitivity_max: str = "restricted", top_k: int = 12):
         p = get_platform()
         results = p.knowledge.search(q, sensitivity_max=sensitivity_max, top_k=top_k)
         return [
@@ -457,13 +643,25 @@ def make_reviewer_routes(app, get_platform):
         ]
 
     @app.get("/learning")
-    def _learning():
+    def _learning(user=Depends(_current_user)):
         p = get_platform()
         return p.learning_dashboard()
 
     @app.post("/learn")
-    def _learn():
+    def _learn(user=Depends(_current_user)):
         p = get_platform()
         return p.learn()
+
+    @app.post("/learn/review")
+    def _learn_review(body: LearningReviewRequest, user=Depends(_current_user)):
+        p = get_platform()
+        try:
+            ok = p.review_learning_candidate(
+                body.candidate_id, body.decision,
+                decided_by=body.user or user.username)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return {"ok": ok, "candidate_id": body.candidate_id,
+                "decision": body.decision}
 
     return app

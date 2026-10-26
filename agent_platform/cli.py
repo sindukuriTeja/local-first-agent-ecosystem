@@ -93,6 +93,13 @@ def main(argv=None) -> int:
 
     args = parser.parse_args(argv)
 
+    # The `reviewer` command starts the web server (which builds the
+    # platform lazily), so it is dispatched before the CLI builds its own
+    # platform instance. (Previously this subcommand was dead code — main()
+    # never routed to it, so `cli reviewer` silently exited.)
+    if args.cmd == "reviewer":
+        return _run_reviewer(args)
+
     platform = create_platform(config_path=args.config)
 
     try:
@@ -198,14 +205,21 @@ def _run_reviewer(args) -> int:
         print("uvicorn is required: pip install fastapi uvicorn python-multipart",
               file=sys.stderr)
         return 2
+    # Honour --config by pointing the server's lazy platform at it.
+    if getattr(args, "config", None):
+        os.environ["LFAE_CONFIG"] = args.config
     url = f"http://127.0.0.1:{args.port}/reviewer"
     print(f"Starting reviewer console at {url}  (Ctrl-C to stop)")
     if args.open:
         import threading
         import webbrowser
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    from .server import app
-    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
+    # Pass the real FastAPI app (not the module-level lazy proxy): uvicorn
+    # detects ASGI2 vs ASGI3 by calling the app with just `scope`, and the
+    # proxy's __call__ is not an async callable, so uvicorn would wrap it
+    # as ASGI2 and every request would 500.
+    from .server import get_app
+    uvicorn.run(get_app(), host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 
 

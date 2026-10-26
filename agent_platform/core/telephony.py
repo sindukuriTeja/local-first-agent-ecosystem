@@ -19,6 +19,7 @@ entry with an acknowledgement status.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import urllib.parse
@@ -56,6 +57,20 @@ class _HTTPBase(VoiceProvider):
         """Wrap a message for TTS delivery."""
         return message
 
+    def _simulate(self, recipient: str, message: str,
+                  note: str) -> Dict[str, Any]:
+        """Shared simulated fallback (used when credentials are missing)."""
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "recipient": recipient,
+            "provider": "simulated",
+            "result": "simulated",
+            "acknowledgement": "simulated_ack",
+            "note": note,
+        }
+        self._log(entry)
+        return entry
+
 
 class TwilioProvider(_HTTPBase):
     """Twilio Voice API. Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
@@ -79,15 +94,19 @@ class TwilioProvider(_HTTPBase):
                f"{self.account_sid}/Calls.json")
         headers = {
             "Authorization": "Basic " +
-            __import__("base64").b64encode(
+            base64.b64encode(
                 f"{self.account_sid}:{self.auth_token}".encode()).decode(),
             "Content-Type": "application/x-www-form-urlencoded",
         }
         try:
+            # Twilio's Calls API accepts a `Message` parameter directly,
+            # which it converts to speech (TTS) — no TwiML endpoint needed.
+            # (The previous implementation pointed `Url` at a non-existent
+            # `Twiml?message=` endpoint, so the call could never speak.)
             result = self._post(url, {
                 "To": recipient,
                 "From": self.from_number,
-                "Url": f"https://api.twilio.com/2010-04-01/Twiml?message={urllib.parse.quote(message)}",
+                "Message": self._tts(message),
             }, headers)
             entry = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -111,18 +130,6 @@ class TwilioProvider(_HTTPBase):
             self._log(entry)
             return entry
 
-    def _simulate(self, recipient, message, note) -> Dict[str, Any]:
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "recipient": recipient,
-            "provider": "simulated",
-            "result": "simulated",
-            "acknowledgement": "simulated_ack",
-            "note": note,
-        }
-        self._log(entry)
-        return entry
-
 
 class ExotelProvider(_HTTPBase):
     """Exotel (India). Requires EXOTEL_ACCOUNT_ID and EXOTEL_AUTH_KEY."""
@@ -141,7 +148,9 @@ class ExotelProvider(_HTTPBase):
         if not self.configured:
             return self._simulate(recipient, message,
                                   note="exotel_not_configured")
-        url = "https://api.exotel.com/v1/test/broadcasts"
+        # Production broadcast endpoint (the previous implementation used
+        # the `/v1/test/` sandbox path, which is not a production voice API).
+        url = "https://api.exotel.com/v1/broadcasts"
         headers = {"Content-Type": "application/x-www-form-urlencoded",
                    "X-EXOTEL-AUTH-KEY": self.auth_key}
         try:
@@ -149,7 +158,7 @@ class ExotelProvider(_HTTPBase):
                 "account_id": self.account_id,
                 "from": self.from_number,
                 "to": recipient,
-                "message": message,
+                "message": self._tts(message),
             }, headers)
             entry = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -172,18 +181,6 @@ class ExotelProvider(_HTTPBase):
             }
             self._log(entry)
             return entry
-
-    def _simulate(self, recipient, message, note) -> Dict[str, Any]:
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "recipient": recipient,
-            "provider": "simulated",
-            "result": "simulated",
-            "acknowledgement": "simulated_ack",
-            "note": note,
-        }
-        self._log(entry)
-        return entry
 
 
 class MSG91Provider(_HTTPBase):
@@ -208,7 +205,7 @@ class MSG91Provider(_HTTPBase):
         try:
             data = json.dumps({
                 "mobiles": recipient,
-                "message": message,
+                "message": self._tts(message),
                 "sender": self.sender_id or "LFAGNT",
             }).encode("utf-8")
             req = urllib.request.Request(url, data=data, headers=headers,
@@ -235,18 +232,6 @@ class MSG91Provider(_HTTPBase):
             }
             self._log(entry)
             return entry
-
-    def _simulate(self, recipient, message, note) -> Dict[str, Any]:
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "recipient": recipient,
-            "provider": "simulated",
-            "result": "simulated",
-            "acknowledgement": "simulated_ack",
-            "note": note,
-        }
-        self._log(entry)
-        return entry
 
 
 def build_voice_provider(settings, log_path: str) -> VoiceProvider:

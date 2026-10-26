@@ -61,11 +61,15 @@ class LiveWebFetcher(BaseFetcher):
     """
 
     def __init__(self, cache_path: str, audit=None,
-                 timeout: int = 20, user_agent: str = "LocalFirstAgent/1.0"):
+                 timeout: int = 20, user_agent: str = "LocalFirstAgent/1.0",
+                 max_cache_entries: int = 200):
         self.cache_path = cache_path
         self.audit = audit
         self.timeout = timeout
         self.user_agent = user_agent
+        # Cap the local cache so it cannot grow unbounded across many
+        # learning/egress runs (oldest entries are dropped first).
+        self.max_cache_entries = max_cache_entries
         os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
 
     def _load_cache(self) -> List[Dict[str, Any]]:
@@ -78,8 +82,16 @@ class LiveWebFetcher(BaseFetcher):
             return []
 
     def _save_cache(self, entries: List[Dict[str, Any]]) -> None:
+        # De-duplicate by URL (keep the most recent) and bound the size so
+        # the cache cannot grow unbounded across many egress runs.
+        deduped: Dict[str, Dict[str, Any]] = {}
+        for e in entries:
+            url = e.get("url", "")
+            if url:
+                deduped[url] = e  # later entries (newer) win
+        bounded = list(deduped.values())[-self.max_cache_entries:]
         with open(self.cache_path, "w", encoding="utf-8") as f:
-            json.dump(entries, f, indent=2, ensure_ascii=False)
+            json.dump(bounded, f, indent=2, ensure_ascii=False)
 
     def _allowed(self, url: str, permitted_urls: List[str]) -> bool:
         host = urllib.parse.urlparse(url).netloc.lower()
@@ -107,6 +119,17 @@ class LiveWebFetcher(BaseFetcher):
                     title=entry.get("title", ""),
                 ))
         if facts:
+            # Audit cache-served egress too, so every use of external
+            # content (live or cached) is on the audit trail.
+            if self.audit:
+                self.audit.record(
+                    actor="agent_3_external_information",
+                    action="egress_cache_hit",
+                    detail={"question": question[:200],
+                            "facts": len(facts[:5]),
+                            "sources": [f.source_url for f in facts[:5]]},
+                    result="served_from_cache",
+                )
             return facts[:5]
 
         # 2. Live fetch from each allowlisted source

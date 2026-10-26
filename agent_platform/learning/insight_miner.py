@@ -17,6 +17,7 @@ Candidates are NEVER applied directly. They go to the VerificationGate.
 from __future__ import annotations
 
 import json
+import zlib
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -156,15 +157,22 @@ class InsightMiner:
             return []
         now = datetime.now(timezone.utc).isoformat()
         out = []
+        # Provenance: the trajectories the model actually saw (the digest
+        # window), not an arbitrary first-10 slice — this keeps the
+        # replay test meaningful for model-mined candidates.
+        digest_ids = [t["id"] for t in trajectories[-max_digest:]][:10]
         for i, c in enumerate(parsed.get("candidates", []) or []):
             if not isinstance(c, dict) or "statement" not in c:
                 continue
             out.append(CandidateInsight(
-                id=f"cand_model_{i}_{len(out)}",
+                # unique, deterministic id (index + crc32 of the statement)
+                # so two model candidates in one run never collide and the
+                # id is stable across runs.
+                id=f"cand_model_{i}_{zlib.crc32(str(c['statement']).encode('utf-8')) % 100000}",
                 kind=c.get("kind", "fact"),
                 statement=str(c["statement"]),
                 scope=c.get("scope", "general"),
-                provenance=[t["id"] for t in trajectories[:10]],
+                provenance=digest_ids,
                 confidence=float(c.get("confidence", 0.5)),
                 created_at=now,
             ))
