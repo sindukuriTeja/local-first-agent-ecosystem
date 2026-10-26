@@ -1,0 +1,30 @@
+# Keep the Docker build context small and free of secrets/local state.
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Local runtime data (never bake into the image)
+data/
+*.db
+*.jsonl
+
+# Frontend build inputs that aren't needed (deps are installed in-stage)
+frontend/node_modules/
+frontend/dist/
+
+# Docs & misc
+docs/
+*.md
+!README.md
+.DS_Store
+.idea/
+.vscode/
+Dockerfile
+docker-compose.yml
+.dockerignore
+e2e_verify.py

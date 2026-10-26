@@ -46,6 +46,8 @@ retrieval:
 
 policy:
   # Users and their roles. Roles map to permission levels.
+  # (Portal demo users are also defined in agent_platform/core/auth.py;
+  #  they are mirrored here so the CLI/API + policy engine recognise them.)
   users:
     - username: "admin"
       role: "admin"
@@ -53,10 +55,22 @@ policy:
       role: "reviewer"
     - username: "analyst"
       role: "analyst"
+    - username: "employee1"
+      role: "employee"
+    - username: "manager1"
+      role: "manager"
+    - username: "counsel1"
+      role: "counsel"
+    - username: "client1"
+      role: "client"
+    - username: "tenant1"
+      role: "tenant"
+    - username: "auditor1"
+      role: "auditor"
   # Which roles may approve drafts / external sharing
-  approver_roles: ["admin", "reviewer"]
+  approver_roles: ["admin", "reviewer", "manager", "counsel"]
   # Which roles may trigger voice notifications
-  voice_roles: ["admin", "reviewer"]
+  voice_roles: ["admin", "reviewer", "manager"]
   # Sensitivity levels (lowest to highest)
   sensitivity_levels: ["public", "internal", "confidential", "restricted"]
   # External sources permitted for Agent 3 (allowlist)

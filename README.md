@@ -75,6 +75,26 @@ User ──> Agent 1 Orchestrator ──> specialist agents (2–16)
 
 ## Quick start
 
+### 0. Fastest way: Docker + multi-portal web app
+
+The platform ships with a **7-portal React web app** (Employee, Management,
+Counsel, Client, Tenant, Auditor, Admin) and a one-command Docker stack that
+runs the backend **and** local Ollama together:
+
+```bash
+docker compose up --build
+# -> http://localhost:8000  (sign in with any demo portal account)
+```
+
+Models (`llama3.1:8b`, `nomic-embed-text`) are pulled automatically on first
+start. Every portal, login, document, request, approval and audit feature
+works immediately; only AI-assisted tasks wait for a model. Full details,
+demo logins, config and persistence are in
+[`docs/DOCKER.md`](docs/DOCKER.md).
+
+<details>
+<summary><b>Prefer to run it natively (no Docker)?</b> Continue below.</summary>
+
 ### 1. Prerequisites
 
 - **Python 3.10+**
@@ -152,6 +172,8 @@ Tests use a mocked Ollama client, so **no model is needed** to run them:
 python -m pytest tests/ -q
 ```
 
+</details>
+
 ## Configuration
 
 Everything lives in **[`config/settings.yaml`](config/settings.yaml)**:
@@ -191,6 +213,7 @@ local-first-agent-ecosystem/
 │   │   ├── policy.py             # identity, sensitivity, egress allowlist
 │   │   ├── approval.py           # human approval gate
 │   │   ├── audit.py              # append-only audit log
+│   │   ├── auth.py               # portal auth: 7 roles, sessions, demo users
 │   │   ├── web_fetcher.py        # Phase 2: allowlisted live egress + cache
 │   │   ├── telephony.py          # Phase 2: Twilio/Exotel/MSG91 voice providers
 │   │   └── base_agent.py         # BaseAgent + context/result types
@@ -207,12 +230,20 @@ local-first-agent-ecosystem/
 │   │   ├── ... (agent_02 .. agent_16)
 │   │   └── registry.py           # builds + wires all agents
 │   ├── platform.py               # factory: wires services + agents + learning
-│   ├── server.py                 # FastAPI local server
+│   ├── portal.py                 # role-scoped portal data + actions
+│   ├── server.py                 # FastAPI server: API + 7-portal SPA
 │   ├── reviewer.py               # Phase 2: reviewer web UI (self-contained)
 │   └── cli.py                    # command-line interface (+ learn/reviewer)
+├── frontend/                     # React/Vite multi-portal web app
+│   ├── src/                      # login + 7 portal pages, API client, auth
+│   ├── package.json
+│   └── vite.config.js
 ├── scripts/generate_dataset.py   # Phase 2: synthetic dataset generator
 ├── tests/                        # pytest suite (mocked Ollama)
+├── Dockerfile                    # multi-stage: build frontend + run backend
+├── docker-compose.yml            # app + Ollama, one-command local stack
 ├── docs/ARCHITECTURE.md          # full architecture reference
+├── docs/DOCKER.md                # Docker + web app guide
 ├── requirements.txt
 └── data/                         # runtime data (gitignored)
 ```

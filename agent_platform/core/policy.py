@@ -19,8 +19,15 @@ _SENSITIVITY_ORDER = ["public", "internal", "confidential", "restricted"]
 # Role -> max sensitivity they may read
 _ROLE_CEILING = {
     "admin": "restricted",
+    "manager": "restricted",
     "reviewer": "confidential",
     "analyst": "internal",
+    # Multi-portal roles
+    "employee": "confidential",
+    "counsel": "confidential",
+    "client": "confidential",
+    "tenant": "confidential",
+    "auditor": "confidential",
 }
 
 

@@ -43,6 +43,8 @@ class Platform:
     trajectory_store: Optional[TrajectoryStore] = None
     learning_scheduler: Optional[LearningScheduler] = None
     exam: List[Dict[str, Any]] = field(default_factory=list)
+    # Multi-portal auth (demo users + sessions)
+    auth: Optional[Any] = None
 
     def __post_init__(self):
         # convenience
@@ -53,7 +55,20 @@ class Platform:
     # ---------- identity ----------
 
     def identify(self, username: str, tenant: str = "default") -> Optional[Identity]:
-        return self.policy.identify(username, tenant)
+        """Resolve a username to an identity.
+
+        Checks the config policy users first, then the multi-portal auth
+        directory (so portal demo users like employee1/manager1 work too).
+        """
+        ident = self.policy.identify(username, tenant)
+        if ident is not None:
+            return ident
+        if self.auth is not None:
+            u = self.auth.get_user(username)
+            if u is not None and u.enabled:
+                return Identity(username=username, role=u.role,
+                                tenant=u.tenant or tenant)
+        return None
 
     # ---------- main entry ----------
 
@@ -224,7 +239,8 @@ class Platform:
 def create_platform(config_path: Optional[str] = None,
                     ollama_client=None,
                     enable_learning: Optional[bool] = None,
-                    dataset_dir: Optional[str] = None) -> Platform:
+                    dataset_dir: Optional[str] = None,
+                    seed: bool = True) -> Platform:
     """Build the full platform.
 
     Args:
@@ -235,8 +251,17 @@ def create_platform(config_path: Optional[str] = None,
             Defaults to the `learning.enabled` config value.
         dataset_dir: if given, seed the knowledge store from this dataset
             directory (containing documents.json).
+        seed: if True and the knowledge store is empty, auto-generate the
+            synthetic demo dataset so the platform is populated out of the
+            box (used by the server / Docker). Pass False in tests that
+            seed their own data.
     """
-    settings = load_settings(config_path)
+    settings = load_settings(config_path or os.environ.get("LFAE_CONFIG") or None)
+    # Env override so containers can point at a different Ollama host
+    # (e.g. the sibling `ollama` service in docker-compose) without editing
+    # settings.yaml.
+    if os.environ.get("LFAE_OLLAMA_URL"):
+        settings.ollama.base_url = os.environ["LFAE_OLLAMA_URL"]
     settings.ensure_storage_dirs()
 
     audit_path = settings.resolve_path(settings.storage.audit_log)
@@ -295,9 +320,27 @@ def create_platform(config_path: Optional[str] = None,
     platform = Platform(settings=settings, services=services,
                         agents=agents, audit=audit)
 
+    # Multi-portal auth (demo users + session store)
+    from .core.auth import AuthManager
+    auth_path = settings.resolve_path(
+        os.path.join(settings.storage.data_dir, "sessions.jsonl")
+    )
+    platform.auth = AuthManager(auth_path)
+
     # Seed the knowledge store from a dataset if requested.
     if dataset_dir:
         platform.seed_dataset(dataset_dir)
+
+    # Auto-seed the demo dataset so the platform is populated out of the box
+    # (server / Docker). Done BEFORE wiring learning so the exam set is
+    # available. Skipped when the store already has data or when a custom
+    # dataset_dir was supplied, and disabled for tests via seed=False.
+    if seed and not dataset_dir:
+        try:
+            if not platform.knowledge.list_documents(limit=1):
+                _auto_seed(platform, settings)
+        except Exception:
+            pass
 
     # Phase 2: wire the self-learning engine (default from config).
     if enable_learning is None:
@@ -307,6 +350,17 @@ def create_platform(config_path: Optional[str] = None,
                               registry, audit)
 
     return platform
+
+
+def _auto_seed(platform: Platform, settings: Settings) -> None:
+    """Generate the synthetic demo dataset into data/dataset and load it."""
+    from scripts.generate_dataset import generate as _gen
+    from .portal import seed_demo_content
+    data_dir = settings.resolve_path(settings.storage.data_dir)
+    out_dir = os.path.join(data_dir, "dataset")
+    _gen(out_dir, seed=42)
+    platform.seed_dataset(out_dir)
+    seed_demo_content(platform)
 
 
 def _wire_learning_engine(platform: Platform, settings: Settings,

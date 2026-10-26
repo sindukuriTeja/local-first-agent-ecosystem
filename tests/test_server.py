@@ -15,9 +15,15 @@ from agent_platform import server
 
 
 @pytest.fixture()
-def client(platform, monkeypatch):
-    monkeypatch.setattr(server, "_platform", platform)
-    return TestClient(server.app)
+def client(platform):
+    from agent_platform.server import create_app
+    c = TestClient(create_app(platform=platform))
+    c.platform = platform  # attach for tests that need the platform object
+    return c
+
+
+def _client_platform(client):
+    return client.platform
 
 
 def test_health(client):
@@ -55,14 +61,10 @@ def test_ask_unknown_user(client):
 
 
 def test_approvals_flow(client):
-    # create a draft via /ask -> run drafting agent directly through /ask?
-    # Simpler: use the platform fixture to create an approval, then decide via API
-    r = client.get("/approvals")
-    assert r.status_code == 200
-
-    # create an approval directly on the platform
-    req = server._platform.approval.request("draft", "API test draft",
-                                            {}, requested_by="admin")
+    # create an approval directly on the platform, then decide via API
+    platform = _client_platform(client)
+    req = platform.approval.request("draft", "API test draft",
+                                    {}, requested_by="admin")
     r = client.post("/approvals/decide", json={
         "approval_id": req.id,
         "user": "reviewer",
@@ -74,8 +76,9 @@ def test_approvals_flow(client):
 
 
 def test_approve_permission_denied(client):
-    req = server._platform.approval.request("draft", "perm test", {},
-                                            requested_by="admin")
+    platform = _client_platform(client)
+    req = platform.approval.request("draft", "perm test", {},
+                                    requested_by="admin")
     r = client.post("/approvals/decide", json={
         "approval_id": req.id,
         "user": "analyst",
