@@ -1,8 +1,8 @@
 """Real-time collaboration workflow engine tests.
 
 Covers: event bus, lifecycle (create -> approve -> start -> work -> input
-request/answer -> complete), role gating, visibility, persistence, and the
-AI runner integration.
+request/answer -> submit review -> management final approval), role gating,
+visibility, persistence, and the AI runner integration.
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ from agent_platform.workflow import (
     ST_IN_PROGRESS,
     ST_PENDING_APPROVAL,
     ST_REJECTED,
+    ST_REVIEW_PENDING,
+    ST_REWORK,
     ST_WAITING_INPUT,
     RealtimeBus,
     WorkflowEngine,
@@ -376,7 +378,7 @@ class TestInputFlow:
 
 
 # ---------------------------------------------------------------------------
-# Completion
+# Completion (now two-stage: employee review -> management final approval)
 # ---------------------------------------------------------------------------
 
 class TestCompletion:
@@ -386,23 +388,138 @@ class TestCompletion:
         engine.start_work("employee1", "employee", wf["id"])
         return wf
 
-    def test_complete(self, engine, events):
+    def test_complete_is_review_submission(self, engine, events):
+        """The legacy complete_workflow now means 'submit for management
+        review' — the workflow is NOT completed and the client is NOT
+        notified until management gives final approval."""
         wf = self._in_progress(engine)
         out = engine.complete_workflow("employee1", "employee", wf["id"],
                                        "Your lease renews on 1 Apr 2027.")
-        assert out["status"] == ST_COMPLETED
-        assert out["final_response"] == "Your lease renews on 1 Apr 2027."
-        assert out["completed_at"] is not None
-        assert events[-1]["type"] == "workflow.completed"
-        assert events[-1]["final_response"] == "Your lease renews on 1 Apr 2027."
-        # requester can read the final response
+        assert out["status"] == ST_REVIEW_PENDING
+        assert out["final_response"] is None
+        assert out["review_submitted_by"] == "employee1"
+        assert events[-1]["type"] == "workflow.review_submitted"
+        # requester sees the pending review, no final response yet
         got = engine.get_workflow(wf["id"], "client1", "client")
-        assert got["final_response"] == "Your lease renews on 1 Apr 2027."
+        assert got["status"] == ST_REVIEW_PENDING
+        assert got["final_response"] is None
 
     def test_non_worker_cannot_complete(self, engine):
         wf = self._in_progress(engine)
         with pytest.raises(PermissionError):
             engine.complete_workflow("client1", "client", wf["id"], "x")
+
+
+# ---------------------------------------------------------------------------
+# Second stage: management final review
+# ---------------------------------------------------------------------------
+
+class TestFinalReview:
+    def _in_review(self, engine):
+        wf = _create(engine)
+        engine.approve_and_assign("manager1", "management", wf["id"], "employee1")
+        engine.start_work("employee1", "employee", wf["id"])
+        engine.submit_review("employee1", "employee", wf["id"],
+                             "Lease renewal analysis complete.")
+        return wf
+
+    def test_submit_review(self, engine, events):
+        wf = _create(engine)
+        engine.approve_and_assign("manager1", "management", wf["id"], "employee1")
+        out = engine.submit_review("employee1", "employee", wf["id"],
+                                   "Done — see attached analysis.")
+        assert out["status"] == ST_REVIEW_PENDING
+        assert out["review_submitted_at"] is not None
+        assert events[-1]["type"] == "workflow.review_submitted"
+        assert events[-1]["summary"] == "Done — see attached analysis."
+
+    def test_submit_review_requires_summary(self, engine):
+        wf = _create(engine)
+        engine.approve_and_assign("manager1", "management", wf["id"], "employee1")
+        with pytest.raises(ValueError):
+            engine.submit_review("employee1", "employee", wf["id"], "   ")
+
+    def test_submit_review_wrong_state(self, engine):
+        wf = _create(engine)
+        with pytest.raises(ValueError):
+            engine.submit_review("employee1", "employee", wf["id"], "x")
+
+    def test_employee_works_while_in_review(self, engine):
+        """The employee may still note/AI/request input while the review is
+        pending (e.g. answering a question management raises)."""
+        wf = self._in_review(engine)
+        out = engine.add_activity("employee1", "employee", wf["id"],
+                                  "note", "Added the clause table.")
+        assert out["status"] == ST_REVIEW_PENDING
+        out2 = engine.run_ai("employee1", "employee", wf["id"], "Check dates.")
+        assert out2["status"] == ST_REVIEW_PENDING
+
+    def test_final_approve_completes_and_notifies(self, engine, events):
+        wf = self._in_review(engine)
+        out = engine.approve_final("manager1", "management", wf["id"],
+                                   "Renewal confirmed for 2 years.",
+                                   note="Looks good")
+        assert out["status"] == ST_COMPLETED
+        assert out["final_response"] == "Renewal confirmed for 2 years."
+        assert out["final_approved_by"] == "manager1"
+        assert out["final_approved_at"] is not None
+        assert out["completed_at"] is not None
+        types = [e["type"] for e in events]
+        assert "workflow.final_approved" in types
+        assert types[-1] == "workflow.completed"
+        # requester can read the final response
+        got = engine.get_workflow(wf["id"], "client1", "client")
+        assert got["final_response"] == "Renewal confirmed for 2 years."
+
+    def test_final_approve_requires_response(self, engine):
+        wf = self._in_review(engine)
+        with pytest.raises(ValueError):
+            engine.approve_final("manager1", "management", wf["id"], "  ")
+
+    def test_final_approve_wrong_state(self, engine):
+        wf = _create(engine)
+        engine.approve_and_assign("manager1", "management", wf["id"], "employee1")
+        with pytest.raises(ValueError):
+            engine.approve_final("manager1", "management", wf["id"], "x")
+
+    @pytest.mark.parametrize("portal", ["client", "employee", "counsel", "auditor"])
+    def test_final_approve_wrong_portal(self, engine, portal):
+        wf = self._in_review(engine)
+        with pytest.raises(PermissionError):
+            engine.approve_final("u1", portal, wf["id"], "x")
+
+    def test_send_back_for_rework(self, engine, events):
+        wf = self._in_review(engine)
+        out = engine.send_back_for_rework("manager1", "management", wf["id"],
+                                          "Please add the limitation periods.")
+        assert out["status"] == ST_REWORK
+        assert out["review_submitted_at"] is None
+        assert events[-1]["type"] == "workflow.rework_requested"
+        assert events[-1]["note"] == "Please add the limitation periods."
+
+    def test_rework_requires_note(self, engine):
+        wf = self._in_review(engine)
+        with pytest.raises(ValueError):
+            engine.send_back_for_rework("manager1", "management", wf["id"], " ")
+
+    def test_rework_wrong_state(self, engine):
+        wf = _create(engine)
+        with pytest.raises(ValueError):
+            engine.send_back_for_rework("manager1", "management", wf["id"], "x")
+
+    def test_employee_can_resubmit_after_rework(self, engine, events):
+        wf = self._in_review(engine)
+        engine.send_back_for_rework("manager1", "management", wf["id"],
+                                    "Missing the deadline table.")
+        # employee does more work and submits again
+        engine.run_ai("employee1", "employee", wf["id"], "Add deadline table.")
+        out = engine.submit_review("employee1", "employee", wf["id"],
+                                   "Deadline table added.")
+        assert out["status"] == ST_REVIEW_PENDING
+        # management approves the second submission
+        out2 = engine.approve_final("manager1", "management", wf["id"],
+                                    "All good — proceeding.")
+        assert out2["status"] == ST_COMPLETED
 
 
 # ---------------------------------------------------------------------------
@@ -455,13 +572,21 @@ class TestFullLifecycle:
         # 5. client answers live
         engine.answer_input("client1", "client", inp_id, "Yes, staying 2 more years")
 
-        # 6. employee completes
+        # 6. employee submits for management review (client not notified yet)
         engine.complete_workflow("employee1", "employee", wf["id"],
-                                 "Renewal confirmed for 2 years at current rates.")
+                                 "Renewal analysis complete — 2 years at current rates.")
+        mid = engine.get_workflow(wf["id"], "client1", "client")
+        assert mid["status"] == ST_REVIEW_PENDING
+        assert mid["final_response"] is None
+
+        # 7. management gives final approval: "it is good, we can proceed"
+        engine.approve_final("manager1", "management", wf["id"],
+                             "Renewal confirmed for 2 years at current rates.")
 
         final = engine.get_workflow(wf["id"], "client1", "client")
         assert final["status"] == ST_COMPLETED
         assert final["final_response"] == "Renewal confirmed for 2 years at current rates."
+        assert final["final_approved_by"] == "manager1"
         assert final["inputs"][0]["answer"] == "Yes, staying 2 more years"
 
         # every state change produced an event
@@ -470,6 +595,7 @@ class TestFullLifecycle:
             "workflow.created", "workflow.assigned", "workflow.started",
             "workflow.ai_running", "workflow.ai_result",
             "workflow.input_requested", "workflow.input_answered",
+            "workflow.review_submitted", "workflow.final_approved",
             "workflow.completed",
         ):
             assert expected in types, f"missing event {expected}"

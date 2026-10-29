@@ -109,6 +109,9 @@ export const api = {
   wfInput: (body) => request('/api/workflow/input', { method: 'POST', body }),
   wfAnswerInput: (body) => request('/api/workflow/input/answer', { method: 'POST', body }),
   wfComplete: (body) => request('/api/workflow/complete', { method: 'POST', body }),
+  wfReview: (body) => request('/api/workflow/review', { method: 'POST', body }),
+  wfFinalApprove: (body) => request('/api/workflow/final-approve', { method: 'POST', body }),
+  wfSendBack: (body) => request('/api/workflow/send-back', { method: 'POST', body }),
 
   // admin
   adminUsers: () => request('/api/admin/users'),

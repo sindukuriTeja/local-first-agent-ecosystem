@@ -1,17 +1,24 @@
 """Real-time collaboration workflow engine.
 
-Turns the demo portals into a live, multi-party request pipeline:
+Turns the demo portals into a live, multi-party request pipeline with a
+two-stage management review:
 
     client/tenant  --submit-->  management  --approve+assign-->  employee
         ^                                                        |
         |                                                        | works (AI agents)
         |                                                        |
-        +---- final response <---- completed <------------------+
-                                                     (employee may request
-                                                     input from client /
-                                                     tenant / counsel /
-                                                     auditor / employee;
-                                                     they answer live)
+        |                                                        v
+        |                                              employee submits REVIEW
+        |                                                        |
+        +---- final response <---- final approved <---- management
+                                                     (management may also
+                                                     send it back for
+                                                     rework; employee may
+                                                     request input from
+                                                     client / tenant /
+                                                     counsel / auditor /
+                                                     employee; they answer
+                                                     live)
 
 Every state change is (a) persisted to a JSONL store, (b) written to the
 append-only audit log, and (c) published to a real-time event bus that the
@@ -84,12 +91,21 @@ ST_PENDING_APPROVAL = "pending_approval"
 ST_ASSIGNED = "assigned"
 ST_IN_PROGRESS = "in_progress"
 ST_WAITING_INPUT = "waiting_input"
+ST_REVIEW_PENDING = "review_pending"
+ST_REWORK = "rework"
 ST_COMPLETED = "completed"
 ST_REJECTED = "rejected"
 
 VALID_STATES = {
     ST_PENDING_APPROVAL, ST_ASSIGNED, ST_IN_PROGRESS,
-    ST_WAITING_INPUT, ST_COMPLETED, ST_REJECTED,
+    ST_WAITING_INPUT, ST_REVIEW_PENDING, ST_REWORK,
+    ST_COMPLETED, ST_REJECTED,
+}
+
+# States in which the assigned employee may do work (start / AI / input /
+# notes / submit review).
+WORKABLE_STATES = {
+    ST_ASSIGNED, ST_IN_PROGRESS, ST_WAITING_INPUT, ST_REVIEW_PENDING, ST_REWORK,
 }
 
 # Portals allowed to *create* a request
@@ -220,6 +236,11 @@ class WorkflowEngine:
             "assigned_to": None,
             "assigned_by": None,
             "assigned_at": None,
+            # Second-stage review (employee -> management -> client)
+            "review_submitted_at": None,
+            "review_submitted_by": None,
+            "final_approved_at": None,
+            "final_approved_by": None,
             "final_response": None,
             "completed_at": None,
             "inputs": [],
@@ -334,6 +355,91 @@ class WorkflowEngine:
                 self._save()
             self._audit(f"user:{user}", "workflow_started", wf_id)
             self._publish("workflow.started", wf, user)
+        return wf
+
+    # ---------- second stage: employee review -> management final approval ----------
+
+    def submit_review(self, user: str, portal: str, wf_id: str,
+                      summary: str) -> Dict[str, Any]:
+        """The assigned employee finishes the work and submits it for
+        management review. The workflow waits for a management decision
+        (final approval or send-back for rework) before the client is
+        notified."""
+        wf = self._require(wf_id)
+        self._ensure_worker(wf, user, portal)
+        if wf["status"] not in WORKABLE_STATES:
+            raise ValueError(
+                f"workflow is {wf['status']}, cannot submit for review")
+        if not summary or not summary.strip():
+            raise ValueError("a review summary is required")
+        wf["status"] = ST_REVIEW_PENDING
+        wf["review_submitted_at"] = _now()
+        wf["review_submitted_by"] = user
+        self._log(wf, user, "review_submitted",
+                  f"Submitted for management review: {summary.strip()}")
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "workflow_review_submitted", wf_id)
+        self._publish("workflow.review_submitted", wf, user,
+                      {"summary": summary.strip()})
+        return wf
+
+    def approve_final(self, user: str, portal: str, wf_id: str,
+                      final_response: str, note: str = "") -> Dict[str, Any]:
+        """Management's final sign-off: 'it is good, we can proceed with
+        this.' The final response is delivered to the requester and the
+        workflow completes."""
+        if portal not in APPROVER_PORTALS:
+            raise PermissionError(f"Portal '{portal}' cannot give final approval.")
+        wf = self._require(wf_id)
+        if wf["status"] != ST_REVIEW_PENDING:
+            raise ValueError(
+                f"workflow is {wf['status']}, not awaiting final review")
+        if not final_response or not final_response.strip():
+            raise ValueError("a final response for the requester is required")
+        wf["status"] = ST_COMPLETED
+        wf["final_response"] = final_response.strip()
+        wf["final_approved_at"] = _now()
+        wf["final_approved_by"] = user
+        wf["completed_at"] = _now()
+        self._log(wf, user, "final_approved",
+                  f"Final approval — it is good, we can proceed with this."
+                  + (f" {note}" if note else ""))
+        self._log(wf, user, "completed",
+                  "Final response delivered to the requester")
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "workflow_final_approved", wf_id)
+        self._publish("workflow.final_approved", wf, user,
+                      {"final_response": wf["final_response"]})
+        self._audit(f"user:{user}", "workflow_completed", wf_id)
+        self._publish("workflow.completed", wf, user,
+                      {"final_response": wf["final_response"]})
+        return wf
+
+    def send_back_for_rework(self, user: str, portal: str, wf_id: str,
+                             note: str) -> Dict[str, Any]:
+        """Management sends the review back to the employee with feedback;
+        the employee revises and submits again."""
+        if portal not in APPROVER_PORTALS:
+            raise PermissionError(f"Portal '{portal}' cannot send back for rework.")
+        wf = self._require(wf_id)
+        if wf["status"] != ST_REVIEW_PENDING:
+            raise ValueError(
+                f"workflow is {wf['status']}, not awaiting final review")
+        if not note or not note.strip():
+            raise ValueError("rework feedback is required")
+        wf["status"] = ST_REWORK
+        wf["review_submitted_at"] = None
+        wf["review_submitted_by"] = None
+        self._log(wf, user, "rework_requested",
+                  f"Sent back for rework — {note.strip()}")
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "workflow_rework_requested", wf_id,
+                    {"note": note.strip()})
+        self._publish("workflow.rework_requested", wf, user,
+                      {"note": note.strip()})
         return wf
 
     def add_activity(self, user: str, portal: str, wf_id: str,
@@ -460,19 +566,11 @@ class WorkflowEngine:
 
     def complete_workflow(self, user: str, portal: str, wf_id: str,
                           final_response: str) -> Dict[str, Any]:
-        wf = self._require(wf_id)
-        self._ensure_worker(wf, user, portal)
-        wf["status"] = ST_COMPLETED
-        wf["final_response"] = final_response
-        wf["completed_at"] = _now()
-        self._log(wf, user, "completed",
-                  "Submitted final response to the requester")
-        with self._lock:
-            self._save()
-        self._audit(f"user:{user}", "workflow_completed", wf_id)
-        self._publish("workflow.completed", wf, user,
-                      {"final_response": final_response})
-        return wf
+        """Legacy entry point (kept for the old /api/workflow/complete
+        endpoint): submitting a final response now means *submitting for
+        management review* — the client is only notified after management
+        gives final approval via :meth:`approve_final`."""
+        return self.submit_review(user, portal, wf_id, final_response)
 
     # ---------- guards ----------
 

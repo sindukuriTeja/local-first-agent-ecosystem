@@ -66,6 +66,8 @@ const STATUS_META = {
   assigned:         { label: 'Assigned', cls: 'badge-info' },
   in_progress:      { label: 'In progress', cls: 'badge-info' },
   waiting_input:    { label: 'Waiting for input', cls: 'badge-warning' },
+  review_pending:   { label: 'Under management review', cls: 'badge-warning' },
+  rework:           { label: 'Sent back for rework', cls: 'badge-error' },
   completed:        { label: 'Completed', cls: 'badge-success' },
   rejected:         { label: 'Rejected', cls: 'badge-error' },
 }
@@ -120,10 +122,11 @@ function renderEmpty(title, sub) {
   </div>`
 }
 
-// ---- management / admin: incoming requests + approve/assign -------------
+// ---- management / admin: incoming requests + approve/assign + final review
 function renderManagementPanel(wfs) {
   const pending = wfs.filter((w) => w.status === 'pending_approval')
-  const active = wfs.filter((w) => !['pending_approval', 'completed', 'rejected'].includes(w.status))
+  const inReview = wfs.filter((w) => w.status === 'review_pending')
+  const active = wfs.filter((w) => !['pending_approval', 'review_pending', 'completed', 'rejected'].includes(w.status))
   const done = wfs.filter((w) => ['completed', 'rejected'].includes(w.status))
   return `
     <div style="margin-bottom:22px;">
@@ -149,6 +152,28 @@ function renderManagementPanel(wfs) {
               </div>
             </div>
           </div>`).join('')}
+    </div>
+    <div style="margin-bottom:22px;">
+      <h4 style="margin-bottom:12px;">Final Review — employee work awaiting your sign-off <span class="badge badge-warning">${inReview.length}</span></h4>
+      ${inReview.length === 0
+        ? renderEmpty('Nothing to review', 'When an employee submits their work, it appears here for your final approval.')
+        : inReview.map((w) => {
+            const lastReview = [...(w.activity || [])].reverse().find((a) => a.kind === 'review_submitted')
+            return `
+          <div class="wf-row" data-wf="${w.id}" style="margin-bottom:14px;">
+            <div style="min-width:0;">
+              <b>${esc(w.subject)}</b>
+              <div class="caption" style="margin-top:2px;">
+                from ${esc(w.created_by)} (${esc(w.created_by_portal)}) · done by ${esc(w.assigned_to)}
+                ${w.review_submitted_at ? ' · submitted ' + fmtTime(w.review_submitted_at) : ''}
+              </div>
+              ${lastReview ? `<p class="text-small" style="margin:8px 0 0; white-space:pre-wrap;">${esc(lastReview.text)}</p>` : ''}
+            </div>
+            <div style="display:flex; gap:8px; flex-shrink:0;">
+              <button class="btn btn-primary btn-sm wf-final-approve-btn" data-wf="${w.id}">It's good — proceed</button>
+              <button class="btn btn-ghost btn-sm wf-sendback-btn" data-wf="${w.id}" style="color:var(--status-error-fg);">Send back</button>
+            </div>
+          </div>`}).join('')}
     </div>
     ${active.length ? `<div style="margin-bottom:22px;">
       <h4 style="margin-bottom:12px;">Active Workflows <span class="badge badge-info">${active.length}</span></h4>
@@ -179,13 +204,20 @@ function wfRow(w) {
 
 // ---- employee: my assigned work -----------------------------------------
 function renderEmployeePanel(wfs) {
-  const open = wfs.filter((w) => ['assigned','in_progress','waiting_input'].includes(w.status))
+  const open = wfs.filter((w) => ['assigned','in_progress','waiting_input','review_pending','rework'].includes(w.status))
   const closed = wfs.filter((w) => ['completed','rejected'].includes(w.status))
   if (open.length === 0) {
     return renderEmpty('No assigned work yet',
       'When management approves a request and assigns it to you, it appears here in real time.')
   }
-  return open.map((w) => `
+  return open.map((w) => {
+    const lastRework = w.status === 'rework'
+      ? [...(w.activity || [])].reverse().find((a) => a.kind === 'rework_requested')
+      : null
+    const lastReview = w.status === 'review_pending'
+      ? [...(w.activity || [])].reverse().find((a) => a.kind === 'review_submitted')
+      : null
+    return `
     <div class="wf-work-card" data-wf="${w.id}">
       <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:8px;">
         <div>
@@ -198,17 +230,28 @@ function renderEmployeePanel(wfs) {
         ${statusBadge(w.status)}
       </div>
       <p class="text-small" style="white-space:pre-wrap; margin-bottom:12px;">${esc(w.message)}</p>
+      ${lastRework ? `<div style="margin:0 0 12px; padding:10px 12px; border-radius:var(--r-12); background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.35);">
+        <div class="caption" style="margin-bottom:4px; color:var(--status-error-fg);">Management sent this back for rework</div>
+        <div class="text-small">${esc(lastRework.text)}</div>
+      </div>` : ''}
+      ${lastReview ? `<div style="margin:0 0 12px; padding:10px 12px; border-radius:var(--r-12); background:var(--gl);">
+        <div class="caption" style="margin-bottom:4px;">Submitted for management review — awaiting final approval</div>
+        <div class="text-small">${esc(lastReview.text)}</div>
+      </div>` : ''}
       ${renderInputs(w)}
       ${renderActivity(w)}
       <div class="wf-actions" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
         ${w.status === 'assigned'
           ? `<button class="btn btn-primary btn-sm wf-start-btn" data-wf="${w.id}">Start work</button>` : ''}
+        ${w.status !== 'review_pending' ? `
         <button class="btn btn-ghost btn-sm wf-ai-btn" data-wf="${w.id}">Run AI task</button>
-        <button class="btn btn-ghost btn-sm wf-input-btn" data-wf="${w.id}">Request input</button>
+        <button class="btn btn-ghost btn-sm wf-input-btn" data-wf="${w.id}">Request input</button>` : ''}
         <button class="btn btn-ghost btn-sm wf-note-btn" data-wf="${w.id}">Add note</button>
-        <button class="btn btn-primary btn-sm wf-complete-btn" data-wf="${w.id}">Complete &amp; respond</button>
+        ${w.status !== 'review_pending'
+          ? `<button class="btn btn-primary btn-sm wf-complete-btn" data-wf="${w.id}">Submit for review</button>`
+          : `<span class="caption">Waiting for management's final approval — the client will be notified once it is good.</span>`}
       </div>
-    </div>`).join('')
+    </div>`}).join('')
     + (closed.length ? `<div style="margin-top:18px;">
         <h4 style="margin-bottom:10px;">Recently closed</h4>
         ${closed.slice(0,4).map(wfRow).join('')}
@@ -365,6 +408,8 @@ export function bindWorkflowEvents(portal) {
     if (!t) return
     if (t.classList.contains('wf-approve-btn')) openAssignModal(t.dataset.wf)
     if (t.classList.contains('wf-reject-btn')) openRejectModal(t.dataset.wf)
+    if (t.classList.contains('wf-final-approve-btn')) openFinalApproveModal(t.dataset.wf)
+    if (t.classList.contains('wf-sendback-btn')) openSendBackModal(t.dataset.wf)
     if (t.classList.contains('wf-start-btn')) await act('start', { workflow_id: t.dataset.wf })
     if (t.classList.contains('wf-ai-btn')) openAiModal(t.dataset.wf)
     if (t.classList.contains('wf-input-btn')) openInputModal(t.dataset.wf)
@@ -392,6 +437,8 @@ export function bindWorkflowEvents(portal) {
       if (kind === 'input') await act('input', { workflow_id: form.dataset.wf, to_user: val('#wf-input-user'), to_portal: val('#wf-input-portal'), question: val('#wf-input-q') })
       if (kind === 'note') await act('activity', { workflow_id: form.dataset.wf, kind: 'note', text: val('#wf-note-text') })
       if (kind === 'complete') await act('complete', { workflow_id: form.dataset.wf, final_response: val('#wf-complete-text') })
+      if (kind === 'final-approve') await act('final-approve', { workflow_id: form.dataset.wf, final_response: val('#wf-final-response'), note: val('#wf-final-note') })
+      if (kind === 'send-back') await act('send-back', { workflow_id: form.dataset.wf, note: val('#wf-sendback-note') })
       closeModal()
     } catch (err) {
       showToast({ title: 'Workflow error', message: err.message, type: 'error' })
@@ -409,6 +456,8 @@ async function act(endpoint, body) {
     activity: () => api.wfActivity(body),
     'input/answer': () => api.wfAnswerInput(body),
     complete: () => api.wfComplete(body),
+    'final-approve': () => api.wfFinalApprove(body),
+    'send-back': () => api.wfSendBack(body),
   }
   await map[endpoint]()
   await refreshWorkflowPanel()
@@ -506,10 +555,32 @@ function openNoteModal(wfId) {
   document.getElementById('note').dataset.wf = wfId
 }
 function openCompleteModal(wfId) {
-  openModal('Complete & send final response', `
+  openModal('Submit for management review', `
     <div class="form-group">
-      <label class="form-label">Final response to the requester</label>
-      <textarea id="wf-complete-text" class="form-textarea" rows="5" required placeholder="Summarize the outcome, next steps, and any documents produced…"></textarea>
-    </div>`, 'complete')
+      <label class="form-label">Summary of your work</label>
+      <textarea id="wf-complete-text" class="form-textarea" rows="5" required placeholder="Summarize what you did, the outcome, next steps, and any documents produced…"></textarea>
+    </div>
+    <p class="caption">Management will review this. If it is good, they will approve it and the client is notified; otherwise it is sent back to you with feedback.</p>`, 'complete')
   document.getElementById('complete').dataset.wf = wfId
+}
+function openFinalApproveModal(wfId) {
+  openModal("Final approval — it's good, we can proceed", `
+    <div class="form-group">
+      <label class="form-label">Final response to the client</label>
+      <textarea id="wf-final-response" class="form-textarea" rows="5" required placeholder="The message the client will receive once you approve…"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Internal note (optional)</label>
+      <input id="wf-final-note" class="form-input" placeholder="For the record" />
+    </div>
+    <p class="caption">Approving delivers the final response to the requester and closes the workflow.</p>`, 'final-approve')
+  document.getElementById('final-approve').dataset.wf = wfId
+}
+function openSendBackModal(wfId) {
+  openModal('Send back for rework', `
+    <div class="form-group">
+      <label class="form-label">Feedback for the employee</label>
+      <textarea id="wf-sendback-note" class="form-textarea" rows="3" required placeholder="What needs to be fixed before you approve?"></textarea>
+    </div>`, 'send-back')
+  document.getElementById('send-back').dataset.wf = wfId
 }

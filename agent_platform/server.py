@@ -18,6 +18,9 @@ Binds to 127.0.0.1 only (local-first). Two surfaces:
         POST /api/portal/request    (Bearer token) {subject, message}
         POST /api/portal/upload     (Bearer token) multipart file
         POST /api/portal/approve    (Bearer token) {approval_id, decision, note}
+        Real-time workflow: /api/workflow (list/create), /approve, /reject,
+            /start, /activity, /ai, /input, /input/answer, /complete,
+            /review (employee -> management), /final-approve, /send-back
         GET  /api/admin/users       (admin) user directory
         POST /api/admin/users       (admin) create user
         POST /api/admin/users/enable (admin) enable/disable a user
@@ -143,6 +146,22 @@ class WorkflowInputAnswer(BaseModel):
 class WorkflowComplete(BaseModel):
     workflow_id: str
     final_response: str
+
+
+class WorkflowReview(BaseModel):
+    workflow_id: str
+    summary: str
+
+
+class WorkflowFinalApprove(BaseModel):
+    workflow_id: str
+    final_response: str
+    note: str = ""
+
+
+class WorkflowSendBack(BaseModel):
+    workflow_id: str
+    note: str
 
 # ---------------------------------------------------------------------------
 # App factory
@@ -369,11 +388,36 @@ def create_app(platform=None) -> FastAPI:
 
     @app.post("/api/workflow/complete")
     def workflow_complete(req: WorkflowComplete, user=Dep(current_user)):
+        # Legacy endpoint: completing now means "submit for management
+        # review" — the requester is only notified after management's
+        # final approval.
         wf = _wf_call(_wf(get_platform()).complete_workflow,
                       user, user.username, user.portal,
                       req.workflow_id, req.final_response)
         return {"workflow_id": wf["id"], "status": wf["status"],
                 "final_response": wf["final_response"]}
+
+    @app.post("/api/workflow/review")
+    def workflow_review(req: WorkflowReview, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).submit_review,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.summary)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/final-approve")
+    def workflow_final_approve(req: WorkflowFinalApprove, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).approve_final,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.final_response, req.note)
+        return {"workflow_id": wf["id"], "status": wf["status"],
+                "final_response": wf["final_response"]}
+
+    @app.post("/api/workflow/send-back")
+    def workflow_send_back(req: WorkflowSendBack, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).send_back_for_rework,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.note)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
 
     # ---- real-time event stream (WebSocket) ----------------------------
     @app.websocket("/ws/workflow")
