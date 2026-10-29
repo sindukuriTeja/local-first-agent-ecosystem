@@ -137,6 +137,9 @@ class PortalService:
             },
         }
 
+        # Real-time collaboration workflow queue (all roles)
+        data["workflow"] = self.workflow_data(user)
+
         if user.portal == "employee":
             data.update(self._employee(user, docs, by_type))
         elif user.portal == "management":
@@ -283,6 +286,35 @@ class PortalService:
             ],
             "learning": p.learning_dashboard() if p.learning_scheduler else None,
             "recent_audit": p.audit_query(limit=30),
+        }
+
+    # ------------------------------------------------------------------
+    # real-time collaboration workflow (client -> management -> employee)
+    # ------------------------------------------------------------------
+    def workflow_data(self, user: PortalUser) -> Dict[str, Any]:
+        """Live workflow queue for this role + pending input requests."""
+        wf = self.p.workflow
+        if wf is None:
+            return {"available": False}
+        items = wf.list_workflows(user.username, user.portal)
+        pending_inputs = []
+        if wf is not None:
+            for w in items:
+                for inp in w.get("inputs", []):
+                    if inp.get("status") == "pending" and (
+                            inp.get("to_user") == user.username
+                            or inp.get("to_portal") == user.portal):
+                        pending_inputs.append({
+                            "input_id": inp["id"],
+                            "workflow_id": w["id"],
+                            "subject": w.get("subject"),
+                            "from_user": inp.get("from_user"),
+                            "question": inp.get("question"),
+                        })
+        return {
+            "available": True,
+            "workflows": items,
+            "pending_inputs": pending_inputs,
         }
 
     # ------------------------------------------------------------------

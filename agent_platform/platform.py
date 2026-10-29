@@ -45,6 +45,9 @@ class Platform:
     exam: List[Dict[str, Any]] = field(default_factory=list)
     # Multi-portal auth (demo users + sessions)
     auth: Optional[Any] = None
+    # Real-time collaboration workflow engine (client -> management ->
+    # employee -> stakeholders -> response), with a live event bus.
+    workflow: Optional[Any] = None
 
     def __post_init__(self):
         # convenience
@@ -253,6 +256,29 @@ class Platform:
         self.knowledge.close()
 
 
+def _workflow_ai_runner(platform: "Platform", user: str, prompt: str,
+                        state: Dict[str, Any]) -> Dict[str, Any]:
+    """Governed AI runner for workflow tasks: routes the prompt through the
+    Orchestrator with the workflow's context (subject/matter) injected so the
+    agents retrieve the right records. Returns a plain dict for the engine."""
+    enriched = prompt
+    if state.get("workflow_subject"):
+        enriched = (
+            f"[Workflow context: subject='{state['workflow_subject']}', "
+            f"matter={state.get('matter') or 'n/a'}]\n{prompt}"
+        )
+    result = platform.handle_request(user, enriched,
+                                     state.get("tenant", "default"),
+                                     state=dict(state))
+    return {
+        "agent_id": result.agent_id,
+        "status": result.status,
+        "answer": result.answer,
+        "sources": result.sources,
+        "error": result.error,
+    }
+
+
 def create_platform(config_path: Optional[str] = None,
                     ollama_client=None,
                     enable_learning: Optional[bool] = None,
@@ -343,6 +369,18 @@ def create_platform(config_path: Optional[str] = None,
         os.path.join(settings.storage.data_dir, "sessions.jsonl")
     )
     platform.auth = AuthManager(auth_path)
+
+    # Real-time collaboration workflow engine.
+    from .workflow import WorkflowEngine
+    wf_path = settings.resolve_path(
+        os.path.join(settings.storage.data_dir, "workflows.jsonl")
+    )
+    platform.workflow = WorkflowEngine(
+        store_path=wf_path,
+        audit=audit,
+        ai_runner=lambda user, prompt, state: _workflow_ai_runner(
+            platform, user, prompt, state),
+    )
 
     # Seed the knowledge store from a dataset if requested.
     if dataset_dir:

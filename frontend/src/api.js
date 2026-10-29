@@ -97,6 +97,19 @@ export const api = {
       body: { approval_id, decision, note },
     }),
 
+  // real-time collaboration workflow
+  wfList: () => request('/api/workflow'),
+  wfCreate: (subject, message, matter = null) =>
+    request('/api/workflow', { method: 'POST', body: { subject, message, matter } }),
+  wfApprove: (body) => request('/api/workflow/approve', { method: 'POST', body }),
+  wfReject: (body) => request('/api/workflow/reject', { method: 'POST', body }),
+  wfStart: (body) => request('/api/workflow/start', { method: 'POST', body }),
+  wfActivity: (body) => request('/api/workflow/activity', { method: 'POST', body }),
+  wfAi: (body) => request('/api/workflow/ai', { method: 'POST', body }),
+  wfInput: (body) => request('/api/workflow/input', { method: 'POST', body }),
+  wfAnswerInput: (body) => request('/api/workflow/input/answer', { method: 'POST', body }),
+  wfComplete: (body) => request('/api/workflow/complete', { method: 'POST', body }),
+
   // admin
   adminUsers: () => request('/api/admin/users'),
   adminCreateUser: (username, password, role, display_name = '') =>

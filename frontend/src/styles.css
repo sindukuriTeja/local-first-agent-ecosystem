@@ -1582,6 +1582,12 @@ p {
   .workspace-main {
     padding: 24px 16px;
   }
+  #sidebar-menu-btn {
+    display: inline-flex;
+  }
+  #workspace-drawer-backdrop.visible {
+    display: block;
+  }
 }
 
 /* -------------------------------------------------------------
@@ -1730,3 +1736,39 @@ p {
     transform: none !important;
   }
 }
+
+/* =============================================================
+   Real-time collaboration workflow panel
+   ============================================================= */
+.wf-panel { border: 1px solid var(--bd); }
+.wf-row {
+  padding: 14px 16px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-12);
+  background: var(--gl);
+  margin-bottom: 10px;
+}
+.wf-work-card {
+  padding: 16px;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-12);
+  background: var(--gl);
+  margin-bottom: 14px;
+}
+.wf-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(8, 10, 20, 0.62);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+}
+.wf-modal {
+  background: #12141f;
+  border: 1px solid var(--bd);
+  border-radius: var(--r-20, 20px);
+  padding: 22px;
+  width: 100%; max-width: 480px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  max-height: 86vh; overflow-y: auto;
+}
+[data-theme="light"] .wf-modal { background: #ffffff; }

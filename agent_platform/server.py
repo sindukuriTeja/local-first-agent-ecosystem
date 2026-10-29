@@ -32,7 +32,8 @@ import os
 from typing import Any, Dict, List, Optional
 
 try:
-    from fastapi import (Depends, FastAPI, File, Header, HTTPException, UploadFile)
+    from fastapi import (Depends, FastAPI, File, Header, HTTPException,
+                         UploadFile, WebSocket, WebSocketDisconnect)
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
@@ -96,6 +97,52 @@ class AskRequest(BaseModel):
     request: str
     tenant: str = "default"
     state: Dict[str, Any] = {}
+
+
+# ---- workflow (real-time collaboration) request models -------------------
+class WorkflowCreate(BaseModel):
+    subject: str
+    message: str
+    matter: Optional[str] = None
+
+
+class WorkflowAssign(BaseModel):
+    workflow_id: str
+    employee_username: str
+    note: str = ""
+
+
+class WorkflowReject(BaseModel):
+    workflow_id: str
+    note: str = ""
+
+
+class WorkflowAction(BaseModel):
+    workflow_id: str
+    text: str = ""
+    kind: str = "note"
+
+
+class WorkflowAi(BaseModel):
+    workflow_id: str
+    prompt: str
+
+
+class WorkflowInput(BaseModel):
+    workflow_id: str
+    to_user: str
+    to_portal: str
+    question: str
+
+
+class WorkflowInputAnswer(BaseModel):
+    input_id: str
+    answer: str
+
+
+class WorkflowComplete(BaseModel):
+    workflow_id: str
+    final_response: str
 
 # ---------------------------------------------------------------------------
 # App factory
@@ -237,6 +284,141 @@ def create_app(platform=None) -> FastAPI:
         if decision is None:
             raise HTTPException(status_code=404, detail="approval not found")
         return decision.__dict__
+
+    # ---- real-time collaboration workflow ------------------------------
+    def _wf(p):
+        if p.workflow is None:
+            raise HTTPException(status_code=503, detail="workflow engine not available")
+        return p.workflow
+
+    def _wf_call(fn, user, *args, **kwargs):
+        """Run a workflow mutation, mapping engine errors to HTTP codes."""
+        try:
+            return fn(*args, **kwargs)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+
+    @app.get("/api/workflow")
+    def workflow_list(user=Dep(current_user)):
+        return {"workflows": _wf(get_platform()).list_workflows(user.username, user.portal)}
+
+    @app.post("/api/workflow")
+    def workflow_create(req: WorkflowCreate, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).create_workflow,
+                      user, user.username, user.portal,
+                      req.subject, req.message, req.matter, user.tenant)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/approve")
+    def workflow_approve(req: WorkflowAssign, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).approve_and_assign,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.employee_username, req.note)
+        return {"workflow_id": wf["id"], "status": wf["status"],
+                "assigned_to": wf["assigned_to"]}
+
+    @app.post("/api/workflow/reject")
+    def workflow_reject(req: WorkflowReject, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).reject,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.note)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/start")
+    def workflow_start(req: WorkflowAction, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).start_work,
+                      user, user.username, user.portal, req.workflow_id)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/activity")
+    def workflow_activity(req: WorkflowAction, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).add_activity,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.kind, req.text)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/ai")
+    def workflow_ai(req: WorkflowAi, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).run_ai,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.prompt)
+        # Return the latest AI activity for immediate UI feedback.
+        ai = [a for a in wf.get("activity", []) if a.get("kind") == "ai"]
+        last = ai[-1] if ai else {}
+        return {"workflow_id": wf["id"], "status": wf["status"],
+                "answer": last.get("data", {}).get("answer"),
+                "agent_id": last.get("data", {}).get("agent_id")}
+
+    @app.post("/api/workflow/input")
+    def workflow_input(req: WorkflowInput, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).request_input,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.to_user, req.to_portal, req.question)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/input/answer")
+    def workflow_input_answer(req: WorkflowInputAnswer, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).answer_input,
+                      user, user.username, user.portal,
+                      req.input_id, req.answer)
+        return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    @app.post("/api/workflow/complete")
+    def workflow_complete(req: WorkflowComplete, user=Dep(current_user)):
+        wf = _wf_call(_wf(get_platform()).complete_workflow,
+                      user, user.username, user.portal,
+                      req.workflow_id, req.final_response)
+        return {"workflow_id": wf["id"], "status": wf["status"],
+                "final_response": wf["final_response"]}
+
+    # ---- real-time event stream (WebSocket) ----------------------------
+    @app.websocket("/ws/workflow")
+    async def workflow_ws(ws: WebSocket, token: str = ""):
+        # Authenticate via query token (browsers can't set WS headers).
+        await ws.accept()
+        p = get_platform()
+        user = p.auth.user_for_token(token) if token else None
+        if user is None:
+            await ws.close(code=4401)
+            return
+        import asyncio
+        loop = asyncio.get_running_loop()
+        closed = {"flag": False}
+
+        def _deliver(event):
+            # Runs on whatever thread performed the mutation. Schedule the
+            # actual WebSocket send onto the event loop thread-safely.
+            if closed["flag"]:
+                return
+            # Only deliver events for workflows this user may see (same
+            # visibility rules as the REST list/get endpoints).
+            wf = event.get("workflow") or {}
+            if wf and not p.workflow._visible_to(wf, user.portal, user.username):
+                return
+            try:
+                asyncio.run_coroutine_threadsafe(ws.send_json(event), loop)
+            except Exception:
+                closed["flag"] = True
+
+        sid = p.workflow.bus.subscribe(_deliver)
+        try:
+            await ws.send_json({"type": "connected", "user": user.username,
+                                "portal": user.portal})
+            # Keep the socket alive; the client drives all actions over REST.
+            while True:
+                try:
+                    await ws.receive_text()
+                except Exception:
+                    break
+        except WebSocketDisconnect:
+            pass
+        finally:
+            closed["flag"] = True
+            p.workflow.bus.unsubscribe(sid)
 
     # ---- admin endpoints ------------------------------------------------
     @app.get("/api/admin/users")

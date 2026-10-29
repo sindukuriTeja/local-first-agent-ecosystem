@@ -10,6 +10,10 @@ import {
   animateCountUp,
 } from './app.js'
 import { api, getToken, getUser, clearSession } from './api.js'
+import {
+  connectWorkflow, disconnectWorkflow, renderWorkflowPanel,
+  refreshWorkflowPanel, bindWorkflowEvents,
+} from './workflow.js'
 
 let currentUser = null
 let portalData = null
@@ -142,9 +146,19 @@ function setupShellInteractions() {
   const menuBtn = document.getElementById('sidebar-menu-btn')
   const sidebar = document.getElementById('workspace-sidebar')
   if (menuBtn && sidebar) {
+    const backdrop = document.createElement('div')
+    backdrop.id = 'workspace-drawer-backdrop'
+    backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(7,11,20,0.55); z-index:85; display:none;'
+    document.body.appendChild(backdrop)
+    const closeDrawer = () => {
+      sidebar.classList.remove('drawer-open')
+      backdrop.style.display = 'none'
+    }
     menuBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('drawer-open')
+      const open = sidebar.classList.toggle('drawer-open')
+      backdrop.style.display = open ? 'block' : 'none'
     })
+    backdrop.addEventListener('click', closeDrawer)
   }
 
   // Sign out modal trigger
@@ -163,6 +177,7 @@ function setupShellInteractions() {
       } catch {
         /* ignore */
       }
+      disconnectWorkflow()
       clearSession()
       window.location.href = 'roles.html'
     })
@@ -209,6 +224,10 @@ async function loadPortalData() {
   try {
     portalData = await api.portal()
     renderActiveWorkspace(contentArea)
+    // Inject the real-time collaboration workflow panel (all roles).
+    injectWorkflowPanel()
+    // Subscribe to the live event stream; re-render the panel on each event.
+    connectWorkflow(() => refreshWorkflowPanel())
   } catch (err) {
     contentArea.innerHTML = `
       <div class="glass-card card-pad-lg" style="border-color: var(--status-error-fg); text-align: center;">
@@ -223,6 +242,19 @@ async function loadPortalData() {
       </div>
     `
   }
+}
+
+// Inject the live workflow panel at the top of the workspace content.
+function injectWorkflowPanel() {
+  const contentArea = document.getElementById('workspace-content')
+  if (!contentArea || !portalData) return
+  const wfData = portalData.workflow || { available: false }
+  if (!wfData.available) return
+  const holder = document.createElement('div')
+  holder.innerHTML = renderWorkflowPanel(activeRoleKey, wfData)
+  // Prepend so it's the first thing each role sees.
+  contentArea.insertBefore(holder.firstElementChild, contentArea.firstChild)
+  bindWorkflowEvents(activeRoleKey)
 }
 
 // Route to role-specific workspace layout
@@ -1474,9 +1506,11 @@ function bindClientFormEvents() {
     const subj = document.getElementById('req-subject').value
     const msg = document.getElementById('req-message').value
     try {
-      await api.submitRequest(subj, msg)
-      showToast({ title: 'Inquiry Submitted', message: 'Your message has reached assigned counsel.', type: 'success' })
+      // Real-time: create a workflow request -> management is notified live.
+      await api.wfCreate(subj, msg)
+      showToast({ title: 'Request Submitted', message: 'Management has been notified in real time.', type: 'success' })
       reqForm.reset()
+      refreshWorkflowPanel()
     } catch (err) {
       showToast({ title: 'Submission Error', message: err.message, type: 'error' })
     }
@@ -1509,9 +1543,11 @@ function bindTenantFormEvents() {
     const subj = document.getElementById('t-req-subject').value
     const msg = document.getElementById('t-req-msg').value
     try {
-      await api.submitRequest(subj, msg)
-      showToast({ title: 'Inquiry Submitted', message: 'Property counsel notified.', type: 'success' })
+      // Real-time: create a workflow request -> management is notified live.
+      await api.wfCreate(subj, msg)
+      showToast({ title: 'Request Submitted', message: 'Management has been notified in real time.', type: 'success' })
       reqForm.reset()
+      refreshWorkflowPanel()
     } catch (err) {
       showToast({ title: 'Error', message: err.message, type: 'error' })
     }
