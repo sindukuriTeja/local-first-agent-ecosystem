@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Nushift — Law, tax and compliance, shifted into one intelligent workspace. Step 1: Choose your role."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <title>Choose Role | Nushift</title>
+
+    <!-- Favicon: 32px gradient circle (violet to cyan) -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238B7BFF'/%3E%3Cstop offset='100%25' stop-color='%2322D3EE'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3C/svg%3E"
+    />
+
+    <!-- Google Fonts: Sora & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- GSAP 3.12 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+
+    <!-- Pre-paint Theme Script -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('nushift_theme') || localStorage.getItem('meridian_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Sticky Header (Image 3) -->
+    <header class="site-header" role="banner">
+      <a href="index.html" class="brand-logo" aria-label="Nushift Home">
+        <span class="logo-core-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+        <span>Nushift</span>
+      </a>
+
+      <div class="header-right">
+        <button
+          type="button"
+          class="btn btn-theme-toggle btn-circle"
+          data-theme-toggle
+          aria-label="Switch theme"
+        ></button>
+        <a href="roles.html" class="btn btn-ghost" style="height: 40px; padding: 0 18px;">
+          Sign in
+        </a>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" style="max-width: 1140px; margin: 0 auto; padding: 64px 32px 96px;">
+      <section style="text-align: center; margin-bottom: 48px;">
+        <span class="eyebrow" style="display: inline-block; margin-bottom: 12px; color: var(--lk); font-weight: 700; letter-spacing: 0.1em;">STEP 1 OF 2</span>
+        <h1 class="h1-page" style="margin-bottom: 14px; font-size: 46px; font-family: var(--font-heading); font-weight: 700;">Select Your Workspace</h1>
+        <p class="hero-subtext" style="margin: 0 auto; font-size: 18px; color: var(--mu); max-width: 620px;">Choose your role to access the workspace, tools, and information relevant to your responsibilities.</p>
+      </section>
+
+      <!-- Roles Grid: 4 cols top row, 3 cols bottom row as in Image 3 -->
+      <div
+        id="roles-grid"
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 20px;
+        "
+      >
+        <!-- Injected via roles.js -->
+      </div>
+    </main>
+
+    <footer style="text-align: center; padding: 32px 16px; border-top: 1px solid var(--bd); font-size: 13px; color: var(--mu);">
+      <p>© 2026 Nushift. Law, tax and compliance, shifted into one intelligent workspace.</p>
+    </footer>
+
+    <script type="module" src="./src/roles.js"></script>
+  </body>
+</html>

@@ -1,0 +1,100 @@
+[
+  {
+    "id": "NOTIF-001",
+    "title": "URGENT: DRT Hearing Cross-examination in 15 Days",
+    "message": "Northern National Bank OA 142/2025 cross-examination of bank officer on NPA date is fixed for 12 Nov 2026. Evidence brief requires sign-off.",
+    "type": "Hearing Alert",
+    "module": "Cases and Matters",
+    "recordId": "M-2025-014",
+    "timestamp": "28 Oct 2026, 08:30 AM",
+    "priority": "Urgent",
+    "status": "Unacknowledged",
+    "acknowledged": false,
+    "escalationStage": 3,
+    "escalationSteps": [
+      { "step": "App Notification", "time": "26 Oct 2026, 08:30 AM", "status": "Delivered", "completed": true },
+      { "step": "Email Alert", "time": "26 Oct 2026, 04:30 PM", "status": "Opened but Unacknowledged", "completed": true },
+      { "step": "SMS / WhatsApp", "time": "27 Oct 2026, 10:00 AM", "status": "Sent to Counsel & MD", "completed": true },
+      { "step": "Automated Voice Call", "time": "28 Oct 2026, 08:30 AM", "status": "Pending Message Approval", "completed": false, "active": true },
+      { "step": "Manager Escalation", "time": "Scheduled: 28 Oct 2026, 05:00 PM", "status": "Queued", "completed": false }
+    ],
+    "voiceCall": {
+      "approved": false,
+      "recipient": "Vikramaditya Singhania (+91 98200 99887)",
+      "text": "Hello Mr. Vikramaditya Singhania. High-priority hearing in Matter M-2025-014 (Northern National Bank DRT Recovery) is scheduled on 12 November 2026. Prior alerts have not been acknowledged. Please acknowledge in the portal.",
+      "language": "English (IN)"
+    }
+  },
+  {
+    "id": "NOTIF-002",
+    "title": "Tax Scrutiny Due Date Approaching: GST SCN Reply Due in 9 Days",
+    "message": "GST Show Cause Notice DRC-01 demand of ₹ 1.84 Cr for Meridian Realty Pvt Ltd requires filing before 06 Nov 2026.",
+    "type": "Tax Deadline",
+    "module": "Tax",
+    "recordId": "TAX-081",
+    "timestamp": "28 Oct 2026, 09:15 AM",
+    "priority": "High",
+    "status": "Acknowledged",
+    "acknowledged": true,
+    "acknowledgedBy": "Suresh Kulkarni",
+    "acknowledgedAt": "28 Oct 2026, 09:40 AM",
+    "escalationStage": 1,
+    "escalationSteps": [
+      { "step": "App Notification", "time": "28 Oct 2026, 09:15 AM", "status": "Acknowledged", "completed": true }
+    ]
+  },
+  {
+    "id": "NOTIF-003",
+    "title": "Secretarial Compliance: Overdue Form 8 Filing",
+    "message": "Meridian Projects LLP Form 8 statement of account was due on 14 Oct 2026 and is currently 14 days overdue.",
+    "type": "Filing Exception",
+    "module": "Companies",
+    "recordId": "FIL-004",
+    "timestamp": "27 Oct 2026, 11:00 AM",
+    "priority": "High",
+    "status": "Unacknowledged",
+    "acknowledged": false,
+    "escalationStage": 2,
+    "escalationSteps": [
+      { "step": "App Notification", "time": "27 Oct 2026, 11:00 AM", "status": "Delivered", "completed": true },
+      { "step": "Email Alert", "time": "27 Oct 2026, 07:00 PM", "status": "Delivered", "completed": true },
+      { "step": "SMS / WhatsApp", "time": "Scheduled: 28 Oct 2026, 03:00 PM", "status": "Pending", "completed": false }
+    ]
+  },
+  {
+    "id": "NOTIF-004",
+    "title": "Loan Settlement Counter-Offer Received: Apex Housing Finance",
+    "message": "Apex Housing Finance committee has submitted informal concurrence for ₹ 122.00 Cr OTS against claim of ₹ 135.50 Cr.",
+    "type": "Settlement Alert",
+    "module": "Loans and Settlements",
+    "recordId": "LN-003",
+    "timestamp": "26 Oct 2026, 04:20 PM",
+    "priority": "Medium",
+    "status": "Acknowledged",
+    "acknowledged": true,
+    "acknowledgedBy": "Amit Verma",
+    "acknowledgedAt": "26 Oct 2026, 04:50 PM",
+    "escalationStage": 1,
+    "escalationSteps": [
+      { "step": "App Notification", "time": "26 Oct 2026, 04:20 PM", "status": "Acknowledged", "completed": true }
+    ]
+  },
+  {
+    "id": "NOTIF-005",
+    "title": "Duplicate Document Flagged: Deed of Mortgage Hinjewadi P-001",
+    "message": "DOC-020 uploaded by Rohan Joshi matches DOC-019 with 98.4% OCR similarity.",
+    "type": "Document Warning",
+    "module": "Documents",
+    "recordId": "DOC-020",
+    "timestamp": "25 Oct 2026, 02:10 PM",
+    "priority": "Low",
+    "status": "Acknowledged",
+    "acknowledged": true,
+    "acknowledgedBy": "Rohan Joshi",
+    "acknowledgedAt": "25 Oct 2026, 02:45 PM",
+    "escalationStage": 1,
+    "escalationSteps": [
+      { "step": "App Notification", "time": "25 Oct 2026, 02:10 PM", "status": "Acknowledged", "completed": true }
+    ]
+  }
+]

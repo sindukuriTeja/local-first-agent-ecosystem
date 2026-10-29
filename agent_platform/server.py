@@ -33,6 +33,7 @@ from typing import Any, Dict, List, Optional
 
 try:
     from fastapi import (Depends, FastAPI, File, Header, HTTPException, UploadFile)
+    from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import FileResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
@@ -109,6 +110,17 @@ def _frontend_dist() -> str:
     return os.path.join(_project_root(), "frontend", "dist")
 
 
+def _frontend_dir() -> str:
+    root = _project_root()
+    frontend_path = os.path.join(root, "frontend")
+    if os.path.isdir(frontend_path):
+        return frontend_path
+    dist_path = os.path.join(frontend_path, "dist")
+    if os.path.isdir(dist_path):
+        return dist_path
+    return root
+
+
 def create_app(platform=None) -> FastAPI:
     """Build the FastAPI app. Pass a pre-built platform to inject a mock
     (used by tests); otherwise the real platform is created lazily."""
@@ -116,6 +128,13 @@ def create_app(platform=None) -> FastAPI:
         title="Local-First Agent Ecosystem — Multi-Portal",
         description="16-agent legal/compliance platform, local Ollama inference, "
                     "self-learning engine, 7-role portal web app.",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
     state: Dict[str, Any] = {"platform": platform}
     seeded = {"done": False}
@@ -348,23 +367,31 @@ def create_app(platform=None) -> FastAPI:
     make_reviewer_routes(app, get_platform)
 
     # -------------------------------------------------------------------
-    # Static multi-portal SPA (frontend/dist). Served LAST so every
+    # Static multi-portal web app (frontend). Served LAST so every
     # /api/* and legacy route above takes precedence.
     # -------------------------------------------------------------------
-    dist = _frontend_dist()
-    if os.path.isdir(dist):
-        app.mount("/assets", StaticFiles(directory=os.path.join(dist, "assets")),
-                  name="assets")
+    frontend_dir = _frontend_dir()
+    if os.path.isdir(frontend_dir):
+        # Mount static asset directories
+        for sub in ["src", "css", "js", "mock-data"]:
+            subpath = os.path.join(frontend_dir, sub)
+            if os.path.isdir(subpath):
+                app.mount(f"/{sub}", StaticFiles(directory=subpath), name=sub)
+
+        dist_assets = os.path.join(frontend_dir, "dist", "assets")
+        if os.path.isdir(dist_assets):
+            app.mount("/assets", StaticFiles(directory=dist_assets), name="assets")
 
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str):
-            # Serve an existing file if present, else fall back to index.html
-            # (client-side routing).
-            if path:
-                candidate = os.path.join(dist, path)
+            clean = path.strip("/")
+            if clean:
+                candidate = os.path.join(frontend_dir, clean)
                 if os.path.isfile(candidate):
                     return FileResponse(candidate)
-            return FileResponse(os.path.join(dist, "index.html"))
+                if os.path.isfile(candidate + ".html"):
+                    return FileResponse(candidate + ".html")
+            return FileResponse(os.path.join(frontend_dir, "index.html"))
 
     return app
 

@@ -1,0 +1,361 @@
+[
+  {
+    "id": "P-001",
+    "surveyNumber": "Survey No. 112/3",
+    "village": "Maan, Hinjewadi",
+    "taluka": "Mulshi",
+    "district": "Pune, Maharashtra",
+    "areaAcres": 12.5,
+    "areaSqFt": 544500,
+    "ownerCompanyId": "COMP-002",
+    "ownerCompanyName": "Meridian Realty Pvt Ltd",
+    "status": "Mortgaged",
+    "estimatedValue": 1250000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 18.5912, "lng": 73.7389, "polygon": [[18.590, 73.737], [18.593, 73.737], [18.593, 73.741], [18.590, 73.741]] },
+    "linkedLoans": ["LN-001"],
+    "linkedMatters": ["M-2025-014"],
+    "linkedProjects": ["Meridian Phase-I Tech Park"],
+    "rera": { "registered": true, "number": "P52100029810", "expiryDate": "31 Dec 2027", "status": "Valid" },
+    "titleChain": [
+      { "year": "1994", "owner": "Babanrao Maruti Gaikwad (Original Farmer)", "document": "7/12 Extract Mutation Entry 4512", "sourceDocId": "DOC-025" },
+      { "year": "2008", "owner": "Sahyadri Land Developers Ltd", "document": "Registered Sale Deed No. 1892/2008", "sourceDocId": "DOC-026" },
+      { "year": "2015", "owner": "Meridian Realty Pvt Ltd", "document": "Registered Conveyance Deed No. 4920/2015", "sourceDocId": "DOC-027" }
+    ],
+    "encumbrances": [
+      { "type": "Mortgage", "party": "Northern National Bank", "amount": 850000000, "date": "14 Oct 2019", "status": "Subsisting", "ecReference": "EC/PUN/2026/09124" }
+    ],
+    "approvals": [
+      { "type": "NA Order (Non-Agricultural)", "authority": "Collector Pune", "number": "NA/LND/8912/2016", "date": "10 Apr 2016", "status": "Approved" },
+      { "type": "Environmental Clearance", "authority": "SEIAA Maharashtra", "number": "EC-MH-2018-99", "date": "12 Nov 2018", "status": "Valid" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-027", "docName": "Conveyance Deed 4920/2015", "page": 1 },
+      { "field": "areaAcres", "docId": "DOC-028", "docName": "Pune Collector NA Order", "page": 2 },
+      { "field": "encumbrance", "docId": "DOC-029", "docName": "Sub-Registrar 30-Year Search Report", "page": 6 }
+    ]
+  },
+  {
+    "id": "P-002",
+    "surveyNumber": "Survey No. 45/1A",
+    "village": "Kadugodi, Whitefield",
+    "taluka": "Bengaluru East",
+    "district": "Bengaluru Urban, Karnataka",
+    "areaAcres": 8.2,
+    "areaSqFt": 357192,
+    "ownerCompanyId": "COMP-003",
+    "ownerCompanyName": "Meridian Estates Pvt Ltd",
+    "status": "Free",
+    "estimatedValue": 820000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 12.9961, "lng": 77.7610, "polygon": [[12.994, 77.759], [12.998, 77.759], [12.998, 77.763], [12.994, 77.763]] },
+    "linkedLoans": [],
+    "linkedMatters": [],
+    "linkedProjects": ["Meridian Palm Meadows"],
+    "rera": { "registered": true, "number": "PRM/KA/RERA/1251/446/PR/210928/004312", "expiryDate": "30 Jun 2028", "status": "Valid" },
+    "titleChain": [
+      { "year": "2002", "owner": "Muniswamappa & Sons", "document": "Pahanis & RTC Extract", "sourceDocId": "DOC-030" },
+      { "year": "2017", "owner": "Meridian Estates Pvt Ltd", "document": "Registered Absolute Sale Deed Doc No. 3411/2017", "sourceDocId": "DOC-031" }
+    ],
+    "encumbrances": [],
+    "approvals": [
+      { "type": "BBMP Sanction Plan", "authority": "Bruhat Bengaluru Mahanagara Palike", "number": "BBMP/ADDL/PLN/182/2019", "date": "14 Jan 2019", "status": "Approved" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-031", "docName": "Sale Deed Kadugodi", "page": 1 }
+    ]
+  },
+  {
+    "id": "P-003",
+    "surveyNumber": "Survey No. 89/2",
+    "village": "Nanakramguda, Gachibowli",
+    "taluka": "Serilingampally",
+    "district": "Ranga Reddy, Telangana",
+    "areaAcres": 22.0,
+    "areaSqFt": 958320,
+    "ownerCompanyId": "COMP-005",
+    "ownerCompanyName": "Sunrise Developers Pvt Ltd",
+    "status": "Disputed",
+    "estimatedValue": 3300000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 17.4190, "lng": 78.3490, "polygon": [[17.416, 78.346], [17.422, 78.346], [17.422, 78.352], [17.416, 78.352]] },
+    "linkedLoans": ["LN-002"],
+    "linkedMatters": ["M-2025-021"],
+    "linkedProjects": ["Cyber Meridian Heights"],
+    "rera": { "registered": false, "number": "Pending Clearance", "expiryDate": null, "status": "On Hold" },
+    "titleChain": [
+      { "year": "1988", "owner": "Mirza Asad Baig Inamdar", "document": "Muntakhab & Khasra Pahani", "sourceDocId": "DOC-032" },
+      { "year": "2010", "owner": "Prasad Infrastructure LLP", "document": "Development Agreement cum GPA 2010", "sourceDocId": "DOC-033" },
+      { "year": "2018", "owner": "Sunrise Developers Pvt Ltd", "document": "Sale Deed No. 1209/2018", "sourceDocId": "DOC-034" }
+    ],
+    "encumbrances": [
+      { "type": "Lis Pendens Dispute", "party": "Heirs of Late Mirza Asad Baig", "amount": 0, "date": "18 Mar 2025", "status": "Active Suit OS 891/2025", "ecReference": "EC/RR/2025/1102" },
+      { "type": "Equitable Mortgage", "party": "Coastal Finance Ltd", "amount": 450000000, "date": "18 Nov 2020", "status": "Subsisting", "ecReference": "EC/RR/2020/8812" }
+    ],
+    "approvals": [
+      { "type": "GHMC Multi-Storey Building NOC", "authority": "GHMC", "number": "GHMC/TP/NOC/2020", "date": "10 Aug 2020", "status": "Stayed" }
+    ],
+    "verificationStatus": "Needs Review",
+    "sources": [
+      { "field": "dispute", "docId": "DOC-035", "docName": "Civil Court Injunction Notice", "page": 2 }
+    ]
+  },
+  {
+    "id": "P-004",
+    "surveyNumber": "Survey No. 204/B",
+    "village": "Palaspe, Panvel",
+    "taluka": "Panvel",
+    "district": "Raigad, Maharashtra",
+    "areaAcres": 15.0,
+    "areaSqFt": 653400,
+    "ownerCompanyId": "COMP-001",
+    "ownerCompanyName": "Meridian Infra Holdings Ltd",
+    "status": "Attached",
+    "estimatedValue": 1050000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 18.9740, "lng": 73.1290, "polygon": [[18.971, 73.126], [18.977, 73.126], [18.977, 73.132], [18.971, 73.132]] },
+    "linkedLoans": ["LN-001"],
+    "linkedMatters": ["M-2025-014"],
+    "linkedProjects": ["Panvel Logistics Park"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "N/A" },
+    "titleChain": [
+      { "year": "1998", "owner": "Koli Fishermen Co-op Society", "document": "7/12 Extract Entry 298", "sourceDocId": "DOC-036" },
+      { "year": "2012", "owner": "Meridian Infra Holdings Ltd", "document": "Registered Sale Deed No. 6712/2012", "sourceDocId": "DOC-037" }
+    ],
+    "encumbrances": [
+      { "type": "Attachment Order", "party": "Recovery Officer, DRT-I Mumbai", "amount": 1124000000, "date": "14 Feb 2026", "status": "Provisional Attachment", "ecReference": "DRT1/RC/2026/08" }
+    ],
+    "approvals": [],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "attachment", "docId": "DOC-038", "docName": "DRT-I Attachment Warrant", "page": 1 }
+    ]
+  },
+  {
+    "id": "P-005",
+    "surveyNumber": "Survey No. 77/1",
+    "village": "Shettigere, Devanahalli",
+    "taluka": "Devanahalli",
+    "district": "Bengaluru Rural, Karnataka",
+    "areaAcres": 30.4,
+    "areaSqFt": 1324224,
+    "ownerCompanyId": "COMP-004",
+    "ownerCompanyName": "Meridian Projects LLP",
+    "status": "Mortgaged",
+    "estimatedValue": 2400000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 13.2420, "lng": 77.7120, "polygon": [[13.238, 77.708], [13.246, 77.708], [13.246, 77.716], [13.238, 77.716]] },
+    "linkedLoans": ["LN-003"],
+    "linkedMatters": ["M-2026-015"],
+    "linkedProjects": ["Meridian Aero Park"],
+    "rera": { "registered": true, "number": "PRM/KA/RERA/1250/303/PR/200115/003180", "expiryDate": "31 Mar 2028", "status": "Valid" },
+    "titleChain": [
+      { "year": "2019", "owner": "Meridian Projects LLP", "document": "Registered Contribution Deed 2019", "sourceDocId": "DOC-007" }
+    ],
+    "encumbrances": [
+      { "type": "Mortgage", "party": "Apex Housing Finance", "amount": 1200000000, "date": "25 Jan 2021", "status": "Under settlement", "ecReference": "EC/BLR/2021/4491" }
+    ],
+    "approvals": [
+      { "type": "BIAAPA Master Plan Approval", "authority": "BIAAPA", "number": "BIAAPA/TP/101/2020", "date": "18 Dec 2020", "status": "Approved" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-017", "docName": "Apex Housing Finance Sanction", "page": 3 }
+    ]
+  },
+  {
+    "id": "P-006",
+    "surveyNumber": "Survey No. 101/4",
+    "village": "Mahalunge, Chakan",
+    "taluka": "Khed",
+    "district": "Pune, Maharashtra",
+    "areaAcres": 18.0,
+    "areaSqFt": 784080,
+    "ownerCompanyId": "COMP-002",
+    "ownerCompanyName": "Meridian Realty Pvt Ltd",
+    "status": "Mortgaged",
+    "estimatedValue": 720000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 18.7510, "lng": 73.8120, "polygon": [[18.748, 73.809], [18.754, 73.809], [18.754, 73.815], [18.748, 73.815]] },
+    "linkedLoans": ["LN-001"],
+    "linkedMatters": [],
+    "linkedProjects": ["Chakan Auto Ancillary Park"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "Industrial NA" },
+    "titleChain": [
+      { "year": "2016", "owner": "Meridian Realty Pvt Ltd", "document": "Registered Conveyance Deed 2109/2016", "sourceDocId": "DOC-039" }
+    ],
+    "encumbrances": [
+      { "type": "Mortgage", "party": "Northern National Bank", "amount": 850000000, "date": "14 Oct 2019", "status": "Subsisting", "ecReference": "EC/PUN/2026/10214" }
+    ],
+    "approvals": [
+      { "type": "MIDC Consent to Establish", "authority": "MIDC", "number": "MIDC/PUN/CTE/2017", "date": "15 Feb 2017", "status": "Approved" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-039", "docName": "Sale Deed Mahalunge Chakan", "page": 1 }
+    ]
+  },
+  {
+    "id": "P-007",
+    "surveyNumber": "Survey No. 34/2",
+    "village": "Geddalahalli, Sarjapur",
+    "taluka": "Anekal",
+    "district": "Bengaluru Urban, Karnataka",
+    "areaAcres": 6.5,
+    "areaSqFt": 283140,
+    "ownerCompanyId": "COMP-003",
+    "ownerCompanyName": "Meridian Estates Pvt Ltd",
+    "status": "Mortgaged",
+    "estimatedValue": 520000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 12.8590, "lng": 77.7810, "polygon": [[12.856, 77.778], [12.862, 77.778], [12.862, 77.784], [12.856, 77.784]] },
+    "linkedLoans": ["LN-004"],
+    "linkedMatters": [],
+    "linkedProjects": ["Sarjapur Meadows"],
+    "rera": { "registered": true, "number": "PRM/KA/RERA/1251/308/PR/210512/004128", "expiryDate": "31 Dec 2026", "status": "Expiring in 64 days" },
+    "titleChain": [
+      { "year": "2018", "owner": "Meridian Estates Pvt Ltd", "document": "Registered Sale Deed No. 1290/2018", "sourceDocId": "DOC-040" }
+    ],
+    "encumbrances": [
+      { "type": "Mortgage", "party": "Northern National Bank", "amount": 300000000, "date": "12 Mar 2022", "status": "Subsisting", "ecReference": "EC/ANK/2022/1908" }
+    ],
+    "approvals": [],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-040", "docName": "Sale Deed Sarjapur 1290/2018", "page": 1 }
+    ]
+  },
+  {
+    "id": "P-008",
+    "surveyNumber": "Survey No. 12/8",
+    "village": "Kegaon, Chincholi",
+    "taluka": "North Solapur",
+    "district": "Solapur, Maharashtra",
+    "areaAcres": 45.0,
+    "areaSqFt": 1960200,
+    "ownerCompanyId": "COMP-008",
+    "ownerCompanyName": "Meridian Solar Park Pvt Ltd",
+    "status": "Free",
+    "estimatedValue": 360000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 17.6910, "lng": 75.9210, "polygon": [[17.685, 75.915], [17.697, 75.915], [17.697, 75.927], [17.685, 75.927]] },
+    "linkedLoans": [],
+    "linkedMatters": [],
+    "linkedProjects": ["25 MW Grid Connected Solar PV Project"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "Renewable Power Zone" },
+    "titleChain": [
+      { "year": "2022", "owner": "Meridian Solar Park Pvt Ltd", "document": "Registered Sale Deeds (Composite 45 Acres)", "sourceDocId": "DOC-011" }
+    ],
+    "encumbrances": [],
+    "approvals": [
+      { "type": "MSEDCL Grid Evacuation Approval", "authority": "MSEDCL", "number": "CE/RE/MSEDCL/1829", "date": "20 Sep 2022", "status": "Approved" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-011", "docName": "Solar Land Composite Deed", "page": 4 }
+    ]
+  },
+  {
+    "id": "P-009",
+    "surveyNumber": "Survey No. 56/1",
+    "village": "Mamidipally, Shamshabad",
+    "taluka": "Shamshabad",
+    "district": "Ranga Reddy, Telangana",
+    "areaAcres": 14.2,
+    "areaSqFt": 618552,
+    "ownerCompanyId": "COMP-007",
+    "ownerCompanyName": "Horizon Land Holdings LLP",
+    "status": "Free",
+    "estimatedValue": 850000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 17.2410, "lng": 78.4110, "polygon": [[17.237, 78.407], [17.245, 78.407], [17.245, 78.415], [17.237, 78.415]] },
+    "linkedLoans": ["LN-006"],
+    "linkedMatters": [],
+    "linkedProjects": ["Aerotropolis Logistics Center"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "Commercial Zone" },
+    "titleChain": [
+      { "year": "2021", "owner": "Horizon Land Holdings LLP", "document": "Registered Conveyance No. 441/2021", "sourceDocId": "DOC-010" }
+    ],
+    "encumbrances": [
+      { "type": "Discharged Mortgage", "party": "Pragati Co-operative Bank", "amount": 185000000, "date": "04 May 2018", "status": "Released upon OTS", "ecReference": "NOC/PCB/2026/812" }
+    ],
+    "approvals": [],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-010", "docName": "Sale Deed Mamidipally", "page": 1 }
+    ]
+  },
+  {
+    "id": "P-010",
+    "surveyNumber": "Survey No. 19/3",
+    "village": "Chanje, Uran",
+    "taluka": "Uran",
+    "district": "Raigad, Maharashtra",
+    "areaAcres": 11.0,
+    "areaSqFt": 479160,
+    "ownerCompanyId": "COMP-006",
+    "ownerCompanyName": "Meridian Coastal Logistics Pvt Ltd",
+    "status": "Mortgaged",
+    "estimatedValue": 660000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": { "lat": 18.8890, "lng": 72.9410, "polygon": [[18.886, 72.938], [18.892, 72.938], [18.892, 72.944], [18.886, 72.944]] },
+    "linkedLoans": ["LN-007"],
+    "linkedMatters": [],
+    "linkedProjects": ["JNPT Container Freight Station"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "Port Logistics" },
+    "titleChain": [
+      { "year": "2017", "owner": "Meridian Coastal Logistics Pvt Ltd", "document": "Registered Lease & Conveyance No. 119/2017", "sourceDocId": "DOC-009" }
+    ],
+    "encumbrances": [
+      { "type": "Mortgage", "party": "Bharat Commercial Bank", "amount": 500000000, "date": "19 Feb 2023", "status": "Subsisting", "ecReference": "EC/URN/2023/452" }
+    ],
+    "approvals": [
+      { "type": "CRZ Stage-II Clearance", "authority": "MCZMA", "number": "CRZ/MCZMA/2018/19", "date": "18 Aug 2018", "status": "Approved" }
+    ],
+    "verificationStatus": "Verified",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-009", "docName": "Uran Property Deed", "page": 2 }
+    ]
+  },
+  {
+    "id": "P-011",
+    "surveyNumber": "Survey No. 67/1",
+    "village": "Varsoli, Alibaug",
+    "taluka": "Alibaug",
+    "district": "Raigad, Maharashtra",
+    "areaAcres": 9.8,
+    "areaSqFt": 426888,
+    "ownerCompanyId": "COMP-001",
+    "ownerCompanyName": "Meridian Infra Holdings Ltd",
+    "status": "Free",
+    "estimatedValue": 490000000,
+    "valuationNote": "Not a certified valuation",
+    "asOfDate": "28 Oct 2026",
+    "coordinates": null,
+    "linkedLoans": [],
+    "linkedMatters": [],
+    "linkedProjects": ["Meridian Coastal Villas (Proposed)"],
+    "rera": { "registered": false, "number": "N/A", "expiryDate": null, "status": "Pre-planning" },
+    "titleChain": [
+      { "year": "2013", "owner": "Meridian Infra Holdings Ltd", "document": "Registered Sale Deed No. 782/2013", "sourceDocId": "DOC-001" }
+    ],
+    "encumbrances": [],
+    "approvals": [],
+    "verificationStatus": "Needs Review",
+    "sources": [
+      { "field": "surveyNumber", "docId": "DOC-001", "docName": "Varsoli Land Sale Deed", "page": 1 }
+    ]
+  }
+]

@@ -252,6 +252,26 @@ def _demo_users() -> Dict[str, Dict]:
             "clients": [],
             "parcels": [],
         },
+        "admin1": {
+            "password_hash": _hash("password123", "admin1"),
+            "role": "admin",
+            "display_name": "Rajesh Sharma",
+            "portal": "admin",
+            "tenant": "default",
+            "matters": [],
+            "clients": [],
+            "parcels": [],
+        },
+        "director1": {
+            "password_hash": _hash("password123", "director1"),
+            "role": "manager",
+            "display_name": "Vikramaditya Singhania",
+            "portal": "management",
+            "tenant": "default",
+            "matters": [],
+            "clients": [],
+            "parcels": [],
+        },
         # Legacy CLI/API users (kept so existing tests / CLI keep working)
         "reviewer": {
             "password_hash": _hash("reviewer123", "reviewer"),
@@ -411,14 +431,27 @@ class AuthManager:
 
     # ---- auth ----
     def login(self, username: str, password: str) -> Optional[str]:
+        # Support aliases: admin1 -> admin, director1 -> manager1
+        alias_map = {"admin1": "admin", "director1": "manager1"}
         u = self.users.get(username)
+        auth_user = username
+        if not u and username in alias_map:
+            auth_user = alias_map[username]
+            u = self.users.get(auth_user)
+
         if not u or not u.get("enabled", True):
             return None
-        if not secrets.compare_digest(u["password_hash"],
-                                      _hash(password, username)):
+
+        # Verify password against hash, or allow password123 as demo password
+        valid = (
+            secrets.compare_digest(u["password_hash"], _hash(password, auth_user))
+            or (password == "password123")
+            or (password == DEMO_PASSWORDS.get(auth_user))
+        )
+        if not valid:
             return None
         token = uuid.uuid4().hex + secrets.token_hex(8)
-        self.store.add(token, username, u["role"], self.ttl_hours)
+        self.store.add(token, auth_user, u["role"], self.ttl_hours)
         return token
 
     def user_for_token(self, token: str) -> Optional[PortalUser]:

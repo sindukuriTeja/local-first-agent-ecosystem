@@ -1,0 +1,305 @@
+[
+  {
+    "id": "LN-001",
+    "facilityNumber": "CF-NNB-2019-08",
+    "borrowerId": "COMP-002",
+    "borrowerName": "Meridian Realty Pvt Ltd",
+    "lenderId": "LEND-001",
+    "lenderName": "Northern National Bank",
+    "type": "Term Loan / Project Finance",
+    "sanctionDate": "14 Oct 2019",
+    "sanctionAmount": 850000000,
+    "sanctionAmountFormatted": "₹ 85.00 Cr",
+    "interestRate": "11.25% p.a. (MCLR + 3.10%)",
+    "tenureMonths": 84,
+    "outstandingClaim": 1124000000,
+    "outstandingClaimFormatted": "₹ 112.40 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 785000000,
+    "interestOutstanding": 248000000,
+    "penalInterest": 91000000,
+    "totalPaid": 265000000,
+    "status": "In DRT Recovery",
+    "guarantors": [
+      { "name": "Meridian Infra Holdings Ltd", "type": "Corporate Guarantee", "status": "Invoked" },
+      { "name": "Vikramaditya Singhania", "type": "Personal Guarantee", "status": "Invoked" }
+    ],
+    "securities": [
+      { "parcelId": "P-001", "name": "Hinjewadi IT Park Land (12.5 acres)", "status": "Mortgaged", "mortgageType": "Exclusive First Charge" },
+      { "parcelId": "P-004", "name": "Panvel Logistics Hub Land (15.0 acres)", "status": "Attached", "mortgageType": "Collateral Extension / Attachment" }
+    ],
+    "proceedings": [
+      {
+        "matterId": "M-2025-014",
+        "forum": "Debts Recovery Tribunal-I, Mumbai",
+        "caseNumber": "OA No. 142/2025",
+        "stage": "Evidence / Cross-examination",
+        "nextHearing": "12 Nov 2026"
+      }
+    ],
+    "settlementStage": "Negotiation",
+    "settlementHistory": [
+      { "date": "15 Aug 2026", "proposedAmount": 750000000, "by": "Borrower", "status": "Countered by Bank at ₹ 92.00 Cr" },
+      { "date": "20 Sep 2026", "proposedAmount": 850000000, "by": "Borrower (Revised)", "status": "Under Evaluation by Bank Zonal Committee" }
+    ],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-012", "docName": "NNB Sanction Letter Ref 4410", "page": 2 },
+      { "field": "outstandingClaim", "docId": "DOC-013", "docName": "NNB Demand Notice U/S 13(2) SARFAESI", "page": 3 },
+      { "field": "guarantee", "docId": "DOC-014", "docName": "Deed of Corporate Guarantee", "page": 1 }
+    ]
+  },
+  {
+    "id": "LN-002",
+    "facilityNumber": "CFL-TL-2020-41",
+    "borrowerId": "COMP-003",
+    "borrowerName": "Meridian Estates Pvt Ltd",
+    "lenderId": "LEND-002",
+    "lenderName": "Coastal Finance Ltd",
+    "type": "Structured Debt Facility",
+    "sanctionDate": "18 Nov 2020",
+    "sanctionAmount": 450000000,
+    "sanctionAmountFormatted": "₹ 45.00 Cr",
+    "interestRate": "13.50% p.a.",
+    "tenureMonths": 60,
+    "outstandingClaim": 421000000,
+    "outstandingClaimFormatted": "₹ 42.10 Cr",
+    "companyLedgerBalance": 386000000,
+    "reconciliationDiscrepancy": 35000000,
+    "reconciliationBadge": "Does not reconcile",
+    "reconciliationExplanation": "Coastal Finance demands ₹ 42.10 Cr; Meridian ledger records ₹ 38.60 Cr. Discrepancy of ₹ 3.50 Cr is disputed penal interest charged contrary to RBI circular DOR.MCS.REC.28/01.01.001/2023-24.",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 350000000,
+    "interestOutstanding": 36000000,
+    "penalInterest": 35000000,
+    "totalPaid": 180000000,
+    "status": "Reconciliation Dispute",
+    "guarantors": [
+      { "name": "Meridian Infra Holdings Ltd", "type": "Corporate Guarantee", "status": "Active" }
+    ],
+    "securities": [
+      { "parcelId": "P-003", "name": "Gachibowli Mixed Use Land (22.0 acres)", "status": "Disputed", "mortgageType": "Equitable Mortgage" }
+    ],
+    "proceedings": [
+      {
+        "matterId": "M-2025-021",
+        "forum": "City Civil Court, Hyderabad",
+        "caseNumber": "OS No. 891/2025",
+        "stage": "Injunction Application",
+        "nextHearing": "04 Nov 2026"
+      }
+    ],
+    "settlementStage": "Offer",
+    "settlementHistory": [
+      { "date": "10 Sep 2026", "proposedAmount": 386000000, "by": "Borrower", "status": "Pending Bank Verification" }
+    ],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-015", "docName": "Loan Agreement Coastal Finance", "page": 4 },
+      { "field": "outstandingClaim", "docId": "DOC-016", "docName": "CFL Ledger Statement 30 Sep 2026", "page": 1 }
+    ]
+  },
+  {
+    "id": "LN-003",
+    "facilityNumber": "AHF-CF-2021-99",
+    "borrowerId": "COMP-004",
+    "borrowerName": "Meridian Projects LLP",
+    "lenderId": "LEND-003",
+    "lenderName": "Apex Housing Finance",
+    "type": "Construction Finance",
+    "sanctionDate": "25 Jan 2021",
+    "sanctionAmount": 1200000000,
+    "sanctionAmountFormatted": "₹ 120.00 Cr",
+    "interestRate": "10.75% p.a.",
+    "tenureMonths": 72,
+    "outstandingClaim": 1355000000,
+    "outstandingClaimFormatted": "₹ 135.50 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 1100000000,
+    "interestOutstanding": 215000000,
+    "penalInterest": 40000000,
+    "totalPaid": 320000000,
+    "status": "Settlement Negotiation",
+    "guarantors": [
+      { "name": "Meridian Infra Holdings Ltd", "type": "Corporate Guarantee", "status": "Active" },
+      { "name": "Apex Urban Developers Ltd", "type": "Corporate Guarantee (JV Partner)", "status": "Active" }
+    ],
+    "securities": [
+      { "parcelId": "P-005", "name": "Devanahalli Tech Park Parcel (30.4 acres)", "status": "Under settlement", "mortgageType": "First Charge on Escrow & Land" }
+    ],
+    "proceedings": [],
+    "settlementStage": "Management decision",
+    "settlementHistory": [
+      { "date": "05 Oct 2026", "proposedAmount": 1220000000, "by": "Management Committee", "status": "Draft - Needs Approval (Awaiting Board Approval)" }
+    ],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-017", "docName": "Sanction Letter Apex Housing", "page": 2 }
+    ]
+  },
+  {
+    "id": "LN-004",
+    "facilityNumber": "NNB-WC-2022-12",
+    "borrowerId": "COMP-001",
+    "borrowerName": "Meridian Infra Holdings Ltd",
+    "lenderId": "LEND-001",
+    "lenderName": "Northern National Bank",
+    "type": "Working Capital Demand Loan",
+    "sanctionDate": "12 Mar 2022",
+    "sanctionAmount": 300000000,
+    "sanctionAmountFormatted": "₹ 30.00 Cr",
+    "interestRate": "11.00% p.a.",
+    "tenureMonths": 36,
+    "outstandingClaim": 342000000,
+    "outstandingClaimFormatted": "₹ 34.20 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 290000000,
+    "interestOutstanding": 52000000,
+    "penalInterest": 0,
+    "totalPaid": 65000000,
+    "status": "Restructured",
+    "guarantors": [
+      { "name": "Vikramaditya Singhania", "type": "Personal Guarantee", "status": "Active" }
+    ],
+    "securities": [
+      { "parcelId": "P-007", "name": "Sarjapur Residential Enclave (6.5 acres)", "status": "Mortgaged", "mortgageType": "Second Charge" }
+    ],
+    "proceedings": [],
+    "settlementStage": "Agreed",
+    "settlementHistory": [],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-018", "docName": "WCDL Agreement NNB", "page": 3 }
+    ]
+  },
+  {
+    "id": "LN-005",
+    "facilityNumber": "WIFL-NCD-2021-03",
+    "borrowerId": "COMP-001",
+    "borrowerName": "Meridian Infra Holdings Ltd",
+    "lenderId": "LEND-004",
+    "lenderName": "Western Industrial Finance Ltd",
+    "type": "Non-Convertible Debentures",
+    "sanctionDate": "10 Jun 2021",
+    "sanctionAmount": 650000000,
+    "sanctionAmountFormatted": "₹ 65.00 Cr",
+    "interestRate": "12.00% p.a.",
+    "tenureMonths": 60,
+    "outstandingClaim": 789000000,
+    "outstandingClaimFormatted": "₹ 78.90 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 650000000,
+    "interestOutstanding": 139000000,
+    "penalInterest": 0,
+    "totalPaid": 120000000,
+    "status": "Standard Servicing",
+    "guarantors": [],
+    "securities": [
+      { "parcelId": "P-008", "name": "Solapur Solar Land (45.0 acres)", "status": "Held", "mortgageType": "Pari-passu Charge" }
+    ],
+    "proceedings": [],
+    "settlementStage": "No-dues received",
+    "settlementHistory": [],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-021", "docName": "Debenture Trust Deed WIFL", "page": 8 }
+    ]
+  },
+  {
+    "id": "LN-006",
+    "facilityNumber": "PCB-TL-2018-77",
+    "borrowerId": "COMP-005",
+    "borrowerName": "Sunrise Developers Pvt Ltd",
+    "lenderId": "LEND-005",
+    "lenderName": "Pragati Co-operative Bank",
+    "type": "Secured Term Loan",
+    "sanctionDate": "04 May 2018",
+    "sanctionAmount": 185000000,
+    "sanctionAmountFormatted": "₹ 18.50 Cr",
+    "interestRate": "12.50% p.a.",
+    "tenureMonths": 48,
+    "outstandingClaim": 198000000,
+    "outstandingClaimFormatted": "₹ 19.80 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 140000000,
+    "interestOutstanding": 48000000,
+    "penalInterest": 10000000,
+    "totalPaid": 95000000,
+    "status": "OTS Settlement Paid",
+    "guarantors": [
+      { "name": "Siddharth Reddy", "type": "Personal Guarantee", "status": "Discharged" }
+    ],
+    "securities": [
+      { "parcelId": "P-009", "name": "Shamshabad Logistics Plot (14.2 acres)", "status": "Released", "mortgageType": "Registered Mortgage" }
+    ],
+    "proceedings": [],
+    "settlementStage": "No-dues received",
+    "settlementHistory": [
+      { "date": "14 Jul 2026", "proposedAmount": 160000000, "by": "Borrower", "status": "Approved by Board & Paid in Full" }
+    ],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-022", "docName": "Pragati Bank Sanction Document", "page": 1 }
+    ]
+  },
+  {
+    "id": "LN-007",
+    "facilityNumber": "BCB-TL-2023-09",
+    "borrowerId": "COMP-006",
+    "borrowerName": "Meridian Coastal Logistics Pvt Ltd",
+    "lenderId": "LEND-006",
+    "lenderName": "Bharat Commercial Bank",
+    "type": "Equipment & Land Loan",
+    "sanctionDate": "19 Feb 2023",
+    "sanctionAmount": 500000000,
+    "sanctionAmountFormatted": "₹ 50.00 Cr",
+    "interestRate": "9.85% p.a.",
+    "tenureMonths": 84,
+    "outstandingClaim": 523000000,
+    "outstandingClaimFormatted": "₹ 52.30 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 470000000,
+    "interestOutstanding": 53000000,
+    "penalInterest": 0,
+    "totalPaid": 85000000,
+    "status": "Standard Regular",
+    "guarantors": [
+      { "name": "Meridian Infra Holdings Ltd", "type": "Corporate Guarantee", "status": "Active" }
+    ],
+    "securities": [
+      { "parcelId": "P-010", "name": "JNPT Port Container Yard (11.0 acres)", "status": "Mortgaged", "mortgageType": "First Charge" }
+    ],
+    "proceedings": [],
+    "settlementStage": "Agreed",
+    "settlementHistory": [],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-023", "docName": "Bharat Bank Facility Letter", "page": 2 }
+    ]
+  },
+  {
+    "id": "LN-008",
+    "facilityNumber": "DCC-CF-2022-81",
+    "borrowerId": "COMP-007",
+    "borrowerName": "Horizon Land Holdings LLP",
+    "lenderId": "LEND-007",
+    "lenderName": "Deccan Credit Corporation",
+    "type": "Bridge Finance",
+    "sanctionDate": "11 Nov 2022",
+    "sanctionAmount": 250000000,
+    "sanctionAmountFormatted": "₹ 25.00 Cr",
+    "interestRate": "14.00% p.a.",
+    "tenureMonths": 36,
+    "outstandingClaim": 281000000,
+    "outstandingClaimFormatted": "₹ 28.10 Cr",
+    "asOfDate": "30 Sep 2026",
+    "principalOutstanding": 250000000,
+    "interestOutstanding": 31000000,
+    "penalInterest": 0,
+    "totalPaid": 42000000,
+    "status": "Standard Regular",
+    "guarantors": [
+      { "name": "Meridian Infra Holdings Ltd", "type": "Corporate Guarantee", "status": "Active" }
+    ],
+    "securities": [],
+    "proceedings": [],
+    "settlementStage": "Negotiation",
+    "settlementHistory": [],
+    "sources": [
+      { "field": "sanctionAmount", "docId": "DOC-024", "docName": "Deccan Credit Facility Agreement", "page": 5 }
+    ]
+  }
+]

@@ -1,0 +1,142 @@
+[
+  {
+    "id": "APP-001",
+    "type": "Settlements",
+    "title": "OTS Settlement Proposal: Facility LN-003 with Apex Housing Finance",
+    "requestedBy": "AI Debt and Settlement Agent",
+    "requestDate": "26 Oct 2026",
+    "age": "2 days ago",
+    "priority": "High",
+    "status": "Pending",
+    "targetRole": "Manager / Board member",
+    "summary": "Proposed one-time settlement of ₹ 122.00 Cr against outstanding claim of ₹ 135.50 Cr, freeing Devanahalli Parcel P-005 (30.4 acres).",
+    "sourceDocId": "DOC-017",
+    "sourceDocName": "Apex Housing Finance Sanction & Claim",
+    "sourcePage": 2,
+    "aiOutput": {
+      "proposedAmount": 1220000000,
+      "waiverAmount": 135000000,
+      "securityToRelease": ["P-005"],
+      "settlementTranches": "Tranche 1: 20% on execution; Tranche 2: 80% within 90 days against Title Deed release.",
+      "financialImpact": "Calculated net cash savings of ₹ 13.50 Cr; eliminates ₹ 4.00 Cr penal interest."
+    },
+    "history": [
+      { "action": "Created", "user": "Debt and Settlement Agent", "time": "26 Oct 2026, 11:30 AM", "comment": "Auto-generated upon counter-proposal evaluation" }
+    ]
+  },
+  {
+    "id": "APP-002",
+    "type": "Drafts",
+    "title": "Legal Reply Draft: Notice under S.138 NI Act (Om Logistics)",
+    "requestedBy": "AI Drafting Agent",
+    "requestDate": "27 Oct 2026",
+    "age": "1 day ago",
+    "priority": "Medium",
+    "status": "Pending",
+    "targetRole": "Lawyer",
+    "summary": "Draft reply to demand notice asserting security cheque misuse and defective transport billing.",
+    "sourceDocId": "DOC-002",
+    "sourceDocName": "Security Cheque Endorsement Memo",
+    "sourcePage": 1,
+    "aiOutput": {
+      "draftTitle": "Reply to Notice Dated 14 May 2026",
+      "factsUsed": [
+        "Cheque No. 441092 was handed over solely as revolving security deposit in Jan 2023.",
+        "Om Logistics acknowledged ₹ 10 Lakh freight credit note due to damaged container transit."
+      ],
+      "counselReviewRequired": true
+    },
+    "history": [
+      { "action": "Created", "user": "AI Drafting Agent", "time": "27 Oct 2026, 03:15 PM", "comment": "Generated using Legal Reply Template v2.1" }
+    ]
+  },
+  {
+    "id": "APP-003",
+    "type": "Extracted fields",
+    "title": "Extracted Loan Claim Verification: Facility LN-002 Coastal Finance",
+    "requestedBy": "Document Intake and OCR Agent",
+    "requestDate": "28 Oct 2026",
+    "age": "4 hours ago",
+    "priority": "High",
+    "status": "Pending",
+    "targetRole": "Finance team member",
+    "summary": "Extracted outstanding balance of ₹ 42,10,00,000 contains ₹ 3.50 Cr penal charge mismatch.",
+    "sourceDocId": "DOC-016",
+    "sourceDocName": "CFL Ledger Statement 30 Sep 2026",
+    "sourcePage": 1,
+    "aiOutput": {
+      "fieldName": "Outstanding Claim Balance",
+      "extractedValue": "₹ 42,10,00,000",
+      "confidence": 76,
+      "reconciliationFlag": "Does not reconcile with internal ledger ₹ 38.60 Cr"
+    },
+    "history": [
+      { "action": "Flagged", "user": "OCR Agent", "time": "28 Oct 2026, 10:14 AM", "comment": "Confidence 76% below 80% threshold; requires manual verification." }
+    ]
+  },
+  {
+    "id": "APP-004",
+    "type": "Outgoing messages",
+    "title": "Voice Call Escalation: DRT-I Hearing Alert for Vikramaditya Singhania",
+    "requestedBy": "Voice Notification Agent",
+    "requestDate": "28 Oct 2026",
+    "age": "1 hour ago",
+    "priority": "Urgent",
+    "status": "Pending",
+    "targetRole": "Administrator",
+    "summary": "Automated voice message alerting Managing Director regarding unacknowledged DRT cross-examination hearing on 12 Nov 2026.",
+    "sourceDocId": "DOC-014",
+    "sourceDocName": "DRT Hearing Notice",
+    "sourcePage": 1,
+    "aiOutput": {
+      "recipient": "Vikramaditya Singhania (+91 98200 99887)",
+      "language": "English (Indian accent)",
+      "scriptText": "Hello Mr. Vikramaditya Singhania. This is an urgent compliance notification from Meridian Infra Group. A high-priority hearing in Matter M-2025-014, Northern National Bank DRT Recovery, is scheduled for 12 November 2026. Prior alerts have not been acknowledged. Please open your compliance dashboard or press 1 to acknowledge receipt."
+    },
+    "history": [
+      { "action": "Generated", "user": "Voice Notification Agent", "time": "28 Oct 2026, 01:30 PM", "comment": "Escalation Step 4 triggered after 48h unacknowledged alert." }
+    ]
+  },
+  {
+    "id": "APP-005",
+    "type": "Filings",
+    "title": "ROC Form 8 Filing Approval for Meridian Projects LLP",
+    "requestedBy": "Compliance and Risk Agent",
+    "requestDate": "28 Oct 2026",
+    "age": "3 hours ago",
+    "priority": "High",
+    "status": "Pending",
+    "targetRole": "Company secretary",
+    "summary": "Form 8 solvency statement is overdue by 14 days. Draft form and partner statement ready for sign-off.",
+    "sourceDocId": "DOC-007",
+    "sourceDocName": "LLP Statement of Account",
+    "sourcePage": 1,
+    "aiOutput": {
+      "form": "Form 8 Solvency Statement FY24-25",
+      "statutoryFee": "₹ 500",
+      "additionalFee": "₹ 1,400 (due to delay)"
+    },
+    "history": []
+  },
+  {
+    "id": "APP-006",
+    "type": "Reports",
+    "title": "Lender Exposure Summary External Report for Consortium Meeting",
+    "requestedBy": "Reporting and Analytics Agent",
+    "requestDate": "28 Oct 2026",
+    "age": "5 hours ago",
+    "priority": "Medium",
+    "status": "Pending",
+    "targetRole": "Manager / Board member",
+    "summary": "Exportable consolidated debt package prepared for external circulation to lenders.",
+    "sourceDocId": "DOC-005",
+    "sourceDocName": "Group Consolidated Debt Schedule",
+    "sourcePage": 1,
+    "aiOutput": {
+      "reportTitle": "Meridian Infra Group - Consortium Debt Summary as of 30 Sep 2026",
+      "externalSharing": true,
+      "watermark": "CONFIDENTIAL - AWAITING APPROVAL"
+    },
+    "history": []
+  }
+]

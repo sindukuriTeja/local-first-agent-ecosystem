@@ -1,0 +1,160 @@
+/* Design Tokens: Meridian Infra Group AI Management Platform */
+:root {
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px; /* body */
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* 8px Spacing Grid */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;   /* inputs & buttons */
+  --radius-lg: 12px;  /* cards & modals */
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Brand Primary */
+  --primary: #4F46E5;        /* Indigo 600 */
+  --primary-hover: #4338CA;  /* Indigo 700 */
+  --primary-light: #EEF2FF;  /* Indigo 50 */
+  --primary-border: #C7D2FE; /* Indigo 200 */
+  --primary-focus: rgba(79, 70, 229, 0.25);
+
+  /* Semantic State Colors */
+  --color-success: #16A34A;
+  --color-success-bg: #F0FDF4;
+  --color-success-border: #BBF7D0;
+  --color-success-text: #15803D;
+
+  --color-warning: #D97706;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  --color-warning-text: #B45309;
+
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEF2F2;
+  --color-danger-border: #FECACA;
+  --color-danger-text: #B91C1C;
+
+  --color-info: #2563EB;
+  --color-info-bg: #EFF6FF;
+  --color-info-border: #BFDBFE;
+  --color-info-text: #1D4ED8;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --ease-default: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Light Theme (Default) Slate Scale */
+  --bg-app: #F8FAFC;         /* slate-50 */
+  --bg-surface: #FFFFFF;     /* pure white */
+  --bg-surface-elevated: #FFFFFF;
+  --bg-sidebar: #0F172A;     /* dark slate sidebar for high-end enterprise look */
+  --bg-sidebar-hover: #1E293B;
+  --bg-sidebar-active: #334155;
+  --text-sidebar: #94A3B8;
+  --text-sidebar-bright: #F8FAFC;
+  --border-sidebar: #1E293B;
+
+  --bg-subtle: #F1F5F9;      /* slate-100 */
+  --bg-subtle-hover: #E2E8F0;/* slate-200 */
+  --border-subtle: #E2E8F0;  /* slate-200 */
+  --border-strong: #CBD5E1;  /* slate-300 */
+  
+  --text-main: #0F172A;      /* slate-900 */
+  --text-muted: #475569;     /* slate-600 */
+  --text-tertiary: #94A3B8;  /* slate-400 */
+  --text-inverse: #FFFFFF;
+
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.1), 0 1px 2px -1px rgba(15, 23, 42, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.1);
+  --shadow-drawer: -4px 0 24px rgba(15, 23, 42, 0.15);
+
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 60px;
+  --drawer-width: 580px;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --bg-app: #0B0F19;         /* deeper slate black */
+  --bg-surface: #111827;     /* slate-900 */
+  --bg-surface-elevated: #1E293B; /* slate-800 */
+  --bg-sidebar: #070B14;
+  --bg-sidebar-hover: #131C2E;
+  --bg-sidebar-active: #1E293B;
+  --text-sidebar: #94A3B8;
+  --text-sidebar-bright: #F8FAFC;
+  --border-sidebar: #1E293B;
+
+  --bg-subtle: #1E293B;      /* slate-800 */
+  --bg-subtle-hover: #334155;/* slate-700 */
+  --border-subtle: #243044;  /* custom dark border */
+  --border-strong: #334155;
+  
+  --text-main: #F8FAFC;      /* slate-50 */
+  --text-muted: #94A3B8;     /* slate-400 */
+  --text-tertiary: #64748B;  /* slate-500 */
+  --text-inverse: #0F172A;
+
+  --primary-light: #1E1B4B;  /* dark indigo */
+  --primary-border: #3730A3;
+
+  --color-success-bg: rgba(22, 163, 74, 0.15);
+  --color-success-border: #15803D;
+  --color-success-text: #4ADE80;
+
+  --color-warning-bg: rgba(217, 119, 6, 0.15);
+  --color-warning-border: #B45309;
+  --color-warning-text: #FBBF24;
+
+  --color-danger-bg: rgba(220, 38, 38, 0.15);
+  --color-danger-border: #B91C1C;
+  --color-danger-text: #F87171;
+
+  --color-info-bg: rgba(37, 99, 235, 0.15);
+  --color-info-border: #1D4ED8;
+  --color-info-text: #60A5FA;
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

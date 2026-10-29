@@ -1,0 +1,54 @@
+[
+  {
+    "id": "KB-001",
+    "topic": "Penal Compounding Prohibition under RBI Regulations",
+    "category": "Banking Law",
+    "storedFact": "RBI guidelines dated 18 Aug 2023 prohibit banking institutions and NBFCs from compounding penal charges or capitalizing them into principal. Penal charges must be levied separately.",
+    "source": "DOC-016 (CFL Facility Audit)",
+    "dateSaved": "22 Sep 2026",
+    "reviewDate": "22 Mar 2027",
+    "status": "Active",
+    "usageCount": 14,
+    "confidence": 99,
+    "anonymizedQuery": "Can financial institutions capitalize penal interest into principal outstanding under Indian banking law?"
+  },
+  {
+    "id": "KB-002",
+    "topic": "Agricultural to Non-Agricultural Conversion Norms (Maharashtra Land Revenue Code)",
+    "category": "Land Regulations",
+    "storedFact": "Section 44 of Maharashtra Land Revenue Code 1966 governs NA conversion. Once NA order is issued and nazrana/conversion charges paid, agricultural tenancy claims cannot be reopened under Section 32G of Bombay Tenancy Act.",
+    "source": "DOC-027 (Pune Collector NA Order)",
+    "dateSaved": "15 Aug 2026",
+    "reviewDate": "15 Feb 2027",
+    "status": "Active",
+    "usageCount": 28,
+    "confidence": 97,
+    "anonymizedQuery": "Effect of Section 44 NA conversion on prior tenancy proceedings under Maharashtra Land Revenue Code."
+  },
+  {
+    "id": "KB-003",
+    "topic": "GST Liability Timing on Joint Development Agreements (JDA)",
+    "category": "Tax Law",
+    "storedFact": "Notification 4/2018-Central Tax (Rate) defers GST liability on development rights transferred by a landowner to a developer until the date of issuance of the completion certificate or first occupation.",
+    "source": "DOC-007 (Devanahalli JDA)",
+    "dateSaved": "10 Jul 2026",
+    "reviewDate": "05 Nov 2026",
+    "status": "Review Due Soon",
+    "usageCount": 35,
+    "confidence": 95,
+    "anonymizedQuery": "When does GST liability trigger for developer on transfer of development rights under JDA?"
+  },
+  {
+    "id": "KB-004",
+    "topic": "Section 12A IBC Withdrawal Post Settlement",
+    "category": "Insolvency Law",
+    "storedFact": "Under Regulation 30A of IBBI Regulations, withdrawal of CIRP petition can be made prior to constitution of CoC with consent of operational creditor upon filing Form FA before NCLT.",
+    "source": "DOC-003 (IBC S.8 Records)",
+    "dateSaved": "01 Jun 2026",
+    "reviewDate": "01 Nov 2026",
+    "status": "Review Due Soon",
+    "usageCount": 19,
+    "confidence": 98,
+    "anonymizedQuery": "Procedure for withdrawal of Section 9 petition before constitution of Committee of Creditors."
+  }
+]

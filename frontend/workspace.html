@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Nushift — Law, tax and compliance, shifted into one intelligent workspace." />
+  <meta name="color-scheme" content="dark light" />
+  <title>Workspace | Nushift</title>
+  
+  <!-- Favicon: 32px gradient circle (violet to cyan) -->
+  <link
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238B7BFF'/%3E%3Cstop offset='100%25' stop-color='%2322D3EE'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3C/svg%3E"
+  />
+
+  <!-- Fonts: Sora & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="./css/tokens.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
+
+  <!-- CDNs: Day.js, Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    if (window.dayjs && window.dayjs_plugin_relativeTime) {
+      window.dayjs.extend(window.dayjs_plugin_relativeTime);
+    }
+  </script>
+
+  <!-- Pre-paint Theme Script -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('nushift_theme') || localStorage.getItem('meridian_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left Sidebar (Collapsible, Role-aware, Grouped) -->
+    <aside class="sidebar" id="app-sidebar" aria-label="Main Navigation">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon" style="background: linear-gradient(135deg, #2563EB 0%, #22D3EE 100%);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="sidebar-logo-text">
+            <span>Nushift</span>
+            <span style="font-weight:400; font-size:11.5px; color:var(--text-muted); display:block; letter-spacing:0.02em;">Intelligent Workspace</span>
+          </div>
+        </div>
+        <button type="button" class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar Collapse (Ctrl+\)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <!-- Rendered dynamically with clean outline SVG icons (no emojis) based on Role Visibility -->
+      </nav>
+
+      <!-- Sidebar Account Profile Section at bottom (Part G matching Image 5) -->
+      <div class="sidebar-footer" style="padding: 12px 14px; border-top: 1px solid var(--border-subtle); position: relative;">
+        <div class="sidebar-profile-card" id="sidebar-profile-card" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; padding: 6px 8px; border-radius: 8px; transition: background 150ms ease;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+            <div class="sidebar-user-avatar" id="sidebar-user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #2563EB; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex-shrink: 0;">RS</div>
+            <div style="flex: 1; min-width: 0;">
+              <div id="sidebar-user-name" style="font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main);">
+                Rajesh Sharma
+              </div>
+              <div id="sidebar-user-role" style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                Administrator
+              </div>
+            </div>
+          </div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+
+        <!-- Sidebar Profile Menu Popup -->
+        <div
+          class="sidebar-profile-menu"
+          id="sidebar-profile-menu"
+          role="menu"
+          style="display: none; position: absolute; left: 14px; right: 14px; bottom: calc(100% + 8px); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); z-index: 100; overflow: hidden;"
+        >
+          <div style="padding: 6px;">
+            <a href="#/profile" class="profile-menu-item" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--text-main); text-decoration: none; transition: background 150ms ease;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>View Profile</span>
+            </a>
+            <button type="button" class="profile-menu-item logout-trigger-btn" id="sidebar-popup-signout-btn" style="width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--color-danger); background: none; border: none; text-align: left; cursor: pointer; transition: background 150ms ease;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Application Wrapper -->
+    <div class="main-wrapper">
+      <!-- Top Bar (Simplified to 4 primary elements: Search, Notifications, Theme toggle, Profile menu) -->
+      <header class="topbar">
+        <div class="topbar-left" style="flex: 1; max-width: 620px;">
+          <!-- Global Search (with Ctrl+K palette trigger) -->
+          <div class="topbar-search-trigger" id="topbar-search-btn" role="search" title="Open Ask Box & Command Palette (Ctrl+K)" style="width: 100%; height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); cursor: pointer; transition: border-color 150ms ease;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size: 13px; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Search records, matters or documents...</span>
+            <span class="kbd-shortcut" style="font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-subtle); color: var(--text-muted); flex-shrink: 0;">Ctrl K</span>
+          </div>
+        </div>
+
+        <div class="topbar-right" style="display: flex; align-items: center; gap: 12px;">
+          <!-- Notifications Bell with Count Badge -->
+          <a href="#/notifications" class="icon-btn" title="Notifications & Alerts" aria-label="Notifications" style="position: relative;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge-count" id="notif-count-badge" style="position: absolute; top: 4px; right: 4px;">2</span>
+          </a>
+
+          <!-- Theme Toggle (Light / Dark) -->
+          <button type="button" class="icon-btn" id="theme-toggle-btn" title="Toggle Light / Dark Mode" aria-label="Toggle Theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+
+          <!-- Top-Right User Profile Avatar Menu Trigger (Part E matching Image 5) -->
+          <div class="user-profile-menu-container" style="position: relative;">
+            <button
+              type="button"
+              class="user-avatar-btn"
+              id="topbar-profile-trigger"
+              aria-label="User profile menu"
+              aria-haspopup="true"
+              aria-expanded="false"
+              style="width: 38px; height: 38px; border-radius: 50%; background: #2563EB; color: #FFFFFF; font-weight: 600; font-size: 13.5px; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; cursor: pointer; transition: transform 150ms ease, box-shadow 150ms ease;"
+            >
+              <span id="user-avatar-badge">RS</span>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div
+              class="profile-dropdown-menu"
+              id="topbar-profile-menu"
+              role="menu"
+              aria-labelledby="topbar-profile-trigger"
+              style="display: none; position: absolute; right: 0; top: calc(100% + 8px); width: 230px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 16px 36px rgba(0,0,0,0.4); z-index: 100; overflow: hidden;"
+            >
+              <div style="padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="dropdown-avatar" id="dropdown-user-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #2563EB; color: #fff; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">RS</div>
+                  <div style="min-width: 0; flex: 1;">
+                    <div id="dropdown-user-name" style="font-weight: 600; font-size: 13.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Rajesh Sharma</div>
+                    <div id="dropdown-user-role" style="font-size: 11.5px; color: var(--text-muted);">Administrator</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="padding: 6px;">
+                <a href="#/profile" class="profile-menu-item" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--text-main); text-decoration: none; transition: background 150ms ease;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span>View Profile</span>
+                </a>
+                <button type="button" class="profile-menu-item logout-trigger-btn" id="topbar-signout-btn" style="width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--color-danger); background: none; border: none; text-align: left; cursor: pointer; transition: background 150ms ease;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Viewport Router Container -->
+      <main class="content-area" id="main-content" role="main">
+        <!-- Rendered dynamically by active module -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Global Right-side RecordDrawer -->
+  <div class="drawer-backdrop" id="global-drawer-backdrop"></div>
+  <aside class="record-drawer" id="global-drawer" aria-labelledby="drawer-title" role="dialog" aria-modal="true">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <h2 class="drawer-title" id="drawer-title">Record Details</h2>
+        <div class="drawer-subtitle" id="drawer-subtitle">Quick Inspect</div>
+      </div>
+      <button type="button" class="drawer-close-btn" id="drawer-close-btn" aria-label="Close Drawer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-tabs">
+      <div class="drawer-tab active" data-tab="overview">Overview</div>
+      <div class="drawer-tab" data-tab="documents">Documents</div>
+      <div class="drawer-tab" data-tab="linked">Linked Records</div>
+      <div class="drawer-tab" data-tab="history">Audit History</div>
+    </div>
+    <div class="drawer-body" id="drawer-body">
+      <!-- Drawer Content -->
+    </div>
+  </aside>
+
+  <!-- Global Command Palette (Ctrl+K) -->
+  <div class="command-palette-backdrop" id="command-palette-backdrop">
+    <div class="command-palette-box">
+      <div class="command-search-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="command-search-input" id="command-palette-input" placeholder="Search modules, loans, parcels, cases, or type a question..." />
+        <span class="kbd-shortcut">ESC</span>
+      </div>
+      <div class="command-list" id="command-palette-results">
+        <!-- Search Results & Fast Actions -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Sign Out Confirmation Modal Dialog -->
+  <div id="signout-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="signout-title">
+    <div class="modal-card">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:40px; height:40px; border-radius:10px; background:rgba(239,68,68,0.15); display:flex; align-items:center; justify-content:center; color:var(--color-danger);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        </div>
+        <div>
+          <h3 id="signout-title" style="font-size:18px; font-weight:700; color:var(--text-main);">Sign out of Nushift</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">End your active workspace session</p>
+        </div>
+      </div>
+      <p style="font-size:14px; color:var(--text-secondary); line-height:1.5; margin-bottom:24px;">
+        Are you sure you want to sign out? You will be returned to the role workspace selection screen.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" id="cancel-signout-btn" class="btn btn-secondary" style="padding:8px 18px;">Cancel</button>
+        <button type="button" id="confirm-signout-btn" class="btn btn-primary" style="background: var(--color-danger); border-color: var(--color-danger); padding:8px 20px;">
+          Sign out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Hub -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Bootstrap Script -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

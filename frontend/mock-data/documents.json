@@ -1,0 +1,735 @@
+[
+  {
+    "id": "DOC-001",
+    "name": "Certificate of Incorporation - Meridian Infra Holdings Ltd.pdf",
+    "type": "Incorporation / Secretarial",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "COMP-001",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 98,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "14 May 2010",
+    "fileSize": "1.4 MB",
+    "pageCount": 4,
+    "extractedFields": [
+      { "id": "F-001", "name": "Company Name", "value": "Meridian Infra Holdings Ltd", "confidence": 99, "status": "Verified", "critical": true },
+      { "id": "F-002", "name": "CIN", "value": "U45200MH2010PLC201948", "confidence": 98, "status": "Verified", "critical": true },
+      { "id": "F-003", "name": "Incorporation Date", "value": "14 May 2010", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-002",
+    "name": "ROC Form INC-22 Registered Office Change.pdf",
+    "type": "Secretarial Filing",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "COMP-001",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "10 Aug 2021",
+    "fileSize": "850 KB",
+    "pageCount": 3,
+    "extractedFields": [
+      { "id": "F-004", "name": "Registered Address", "value": "Level 14, Meridian Tower, Lower Parel, Mumbai", "confidence": 95, "status": "Verified", "critical": false }
+    ]
+  },
+  {
+    "id": "DOC-003",
+    "name": "Annual Return Form MGT-7 FY24-25.pdf",
+    "type": "Annual Secretarial Filing",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "COMP-001",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 96,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "28 Oct 2025",
+    "fileSize": "4.2 MB",
+    "pageCount": 18,
+    "extractedFields": [
+      { "id": "F-005", "name": "Paid-up Share Capital", "value": "₹ 120,00,00,000", "confidence": 97, "status": "Verified", "critical": true },
+      { "id": "F-006", "name": "Promoter Holding", "value": "60.00%", "confidence": 96, "status": "Verified", "critical": false }
+    ]
+  },
+  {
+    "id": "DOC-004",
+    "name": "Certificate of Incorporation - Meridian Realty Pvt Ltd.pdf",
+    "type": "Incorporation / Secretarial",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "COMP-002",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 99,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "18 Mar 2014",
+    "fileSize": "1.2 MB",
+    "pageCount": 3,
+    "extractedFields": [
+      { "id": "F-007", "name": "CIN", "value": "U70102MH2014PTC254891", "confidence": 99, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-005",
+    "name": "Audited Balance Sheet & P&L FY24-25 - Meridian Realty.pdf",
+    "type": "Financial Statement",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "COMP-002",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 92,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "15 Sep 2025",
+    "fileSize": "6.8 MB",
+    "pageCount": 32,
+    "extractedFields": [
+      { "id": "F-008", "name": "Revenue from Operations", "value": "₹ 145,20,00,000", "confidence": 93, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-006",
+    "name": "Memorandum & Articles of Association - Meridian Estates.pdf",
+    "type": "Charter Document",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "COMP-003",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "22 Jul 2016",
+    "fileSize": "3.1 MB",
+    "pageCount": 24,
+    "extractedFields": [
+      { "id": "F-009", "name": "Authorized Capital", "value": "₹ 30,00,00,000", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-007",
+    "name": "LLP Agreement Form 3 - Meridian Projects LLP.pdf",
+    "type": "Partnership Deed",
+    "companyId": "COMP-004",
+    "companyName": "Meridian Projects LLP",
+    "linkedEntity": "COMP-004",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 91,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "05 Nov 2019",
+    "fileSize": "2.9 MB",
+    "pageCount": 16,
+    "extractedFields": [
+      { "id": "F-010", "name": "LLPIN", "value": "AAB-4921", "confidence": 99, "status": "Verified", "critical": true },
+      { "id": "F-011", "name": "Profit Sharing Ratio", "value": "50:50 JV", "confidence": 92, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-008",
+    "name": "Shareholders Agreement Sunrise Developers & Meridian.pdf",
+    "type": "Shareholders Agreement",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "COMP-005",
+    "confidentiality": "Restricted",
+    "status": "Verified",
+    "confidence": 89,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "01 May 2019",
+    "fileSize": "5.4 MB",
+    "pageCount": 42,
+    "extractedFields": [
+      { "id": "F-012", "name": "Equity Stake", "value": "33.00%", "confidence": 90, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-009",
+    "name": "Certificate of Incorporation - Meridian Coastal Logistics.pdf",
+    "type": "Incorporation / Secretarial",
+    "companyId": "COMP-006",
+    "companyName": "Meridian Coastal Logistics Pvt Ltd",
+    "linkedEntity": "COMP-006",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 97,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "09 Aug 2017",
+    "fileSize": "1.1 MB",
+    "pageCount": 3,
+    "extractedFields": [
+      { "id": "F-013", "name": "CIN", "value": "U63030MH2017PTC298412", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-010",
+    "name": "LLP Incorporation Agreement - Horizon Land Holdings.pdf",
+    "type": "Charter Document",
+    "companyId": "COMP-007",
+    "companyName": "Horizon Land Holdings LLP",
+    "linkedEntity": "COMP-007",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "14 Jan 2021",
+    "fileSize": "2.2 MB",
+    "pageCount": 14,
+    "extractedFields": [
+      { "id": "F-014", "name": "LLPIN", "value": "AAC-1092", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-011",
+    "name": "Certificate of Incorporation - Meridian Solar Park Pvt Ltd.pdf",
+    "type": "Incorporation / Secretarial",
+    "companyId": "COMP-008",
+    "companyName": "Meridian Solar Park Pvt Ltd",
+    "linkedEntity": "COMP-008",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 98,
+    "uploadedBy": "Priya Nambiar",
+    "uploadDate": "11 May 2022",
+    "fileSize": "1.0 MB",
+    "pageCount": 3,
+    "extractedFields": [
+      { "id": "F-015", "name": "CIN", "value": "U40106MH2022PTC384192", "confidence": 99, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-012",
+    "name": "Northern National Bank Sanction Letter Ref 4410.pdf",
+    "type": "Sanction Letter",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "LN-001",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 96,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "15 Oct 2019",
+    "fileSize": "3.5 MB",
+    "pageCount": 8,
+    "extractedFields": [
+      { "id": "F-016", "name": "Sanction Amount", "value": "₹ 85,00,00,000", "confidence": 98, "status": "Verified", "critical": true },
+      { "id": "F-017", "name": "Interest Rate", "value": "11.25% p.a.", "confidence": 94, "status": "Verified", "critical": true },
+      { "id": "F-018", "name": "Primary Security", "value": "Hinjewadi Maan Land (12.5 acres)", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-013",
+    "name": "NNB Demand Notice under Section 13(2) SARFAESI.pdf",
+    "type": "Statutory Notice",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "LN-001",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 93,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "16 Jan 2024",
+    "fileSize": "1.8 MB",
+    "pageCount": 6,
+    "extractedFields": [
+      { "id": "F-019", "name": "Demand Claim Amount", "value": "₹ 112,40,00,000", "confidence": 97, "status": "Verified", "critical": true },
+      { "id": "F-020", "name": "NPA Date Alleged", "value": "31 Dec 2023", "confidence": 91, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-014",
+    "name": "DRT-I Mumbai Original Application OA No 142 of 2025.pdf",
+    "type": "Court Plaint / Petition",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "M-2025-014",
+    "confidentiality": "Restricted",
+    "status": "Verified",
+    "confidence": 88,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "12 Mar 2025",
+    "fileSize": "12.4 MB",
+    "pageCount": 78,
+    "extractedFields": [
+      { "id": "F-021", "name": "OA Claim", "value": "₹ 112,40,00,000 plus future interest", "confidence": 92, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-015",
+    "name": "Coastal Finance Facility Agreement ₹ 45 Cr.pdf",
+    "type": "Loan Agreement",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "LN-002",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "19 Nov 2020",
+    "fileSize": "4.8 MB",
+    "pageCount": 36,
+    "extractedFields": [
+      { "id": "F-022", "name": "Sanctioned Limit", "value": "₹ 45,00,00,000", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-016",
+    "name": "Coastal Finance Account Statement as of 30 Sep 2026.pdf",
+    "type": "Bank Statement",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "LN-002",
+    "confidentiality": "Confidential",
+    "status": "Corrected",
+    "confidence": 76,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "02 Oct 2026",
+    "fileSize": "1.6 MB",
+    "pageCount": 5,
+    "extractedFields": [
+      { "id": "F-023", "name": "Claim Outstanding", "value": "₹ 42,10,00,000", "confidence": 76, "status": "Corrected", "critical": true, "note": "Contains ₹3.50 Cr disputed penal compounding" }
+    ]
+  },
+  {
+    "id": "DOC-017",
+    "name": "Apex Housing Finance Sanction Letter ₹ 120 Cr.pdf",
+    "type": "Sanction Letter",
+    "companyId": "COMP-004",
+    "companyName": "Meridian Projects LLP",
+    "linkedEntity": "LN-003",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "26 Jan 2021",
+    "fileSize": "3.8 MB",
+    "pageCount": 11,
+    "extractedFields": [
+      { "id": "F-024", "name": "Sanction Amount", "value": "₹ 120,00,00,000", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-018",
+    "name": "Northern National Bank WCDL ₹ 30 Cr Agreement.pdf",
+    "type": "Loan Agreement",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "LN-004",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 93,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "14 Mar 2022",
+    "fileSize": "3.1 MB",
+    "pageCount": 18,
+    "extractedFields": [
+      { "id": "F-025", "name": "Facility Amount", "value": "₹ 30,00,00,000", "confidence": 95, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-019",
+    "name": "Registered Deed of Mortgage - Hinjewadi Parcel P-001 (Original).pdf",
+    "type": "Mortgage Deed",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Restricted",
+    "status": "Verified",
+    "confidence": 97,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "20 Oct 2019",
+    "fileSize": "5.6 MB",
+    "pageCount": 28,
+    "extractedFields": [
+      { "id": "F-026", "name": "Mortgaged Parcel", "value": "Survey No. 112/3 Maan Hinjewadi", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-020",
+    "name": "Duplicate Copy - Registered Deed of Mortgage Hinjewadi P-001.pdf",
+    "type": "Mortgage Deed",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Restricted",
+    "status": "Unreviewed",
+    "confidence": 96,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "25 Oct 2026",
+    "fileSize": "5.6 MB",
+    "pageCount": 28,
+    "isDuplicate": true,
+    "duplicateOf": "DOC-019",
+    "similarityScore": 98.4,
+    "extractedFields": [
+      { "id": "F-027", "name": "Mortgaged Parcel", "value": "Survey No. 112/3 Maan Hinjewadi", "confidence": 98, "status": "Unreviewed", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-021",
+    "name": "Western Industrial Finance NCD Trust Deed ₹ 65 Cr.pdf",
+    "type": "Debenture Trust Deed",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "LN-005",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 92,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "12 Jun 2021",
+    "fileSize": "6.2 MB",
+    "pageCount": 44,
+    "extractedFields": [
+      { "id": "F-028", "name": "Principal Issue", "value": "₹ 65,00,00,000", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-022",
+    "name": "Pragati Co-operative Bank OTS No Dues Certificate.pdf",
+    "type": "No Dues Certificate",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "LN-006",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 98,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "20 Jul 2026",
+    "fileSize": "920 KB",
+    "pageCount": 2,
+    "extractedFields": [
+      { "id": "F-029", "name": "OTS Amount Settled", "value": "₹ 16,00,00,000", "confidence": 99, "status": "Verified", "critical": true },
+      { "id": "F-030", "name": "Security Released", "value": "Shamshabad Survey 56/1 (14.2 acres)", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-023",
+    "name": "Bharat Commercial Bank Facility Sanction Letter ₹ 50 Cr.pdf",
+    "type": "Sanction Letter",
+    "companyId": "COMP-006",
+    "companyName": "Meridian Coastal Logistics Pvt Ltd",
+    "linkedEntity": "LN-007",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "20 Feb 2023",
+    "fileSize": "2.4 MB",
+    "pageCount": 7,
+    "extractedFields": [
+      { "id": "F-031", "name": "Facility Amount", "value": "₹ 50,00,00,000", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-024",
+    "name": "Deccan Credit Corporation Loan Agreement ₹ 25 Cr.pdf",
+    "type": "Loan Agreement",
+    "companyId": "COMP-007",
+    "companyName": "Horizon Land Holdings LLP",
+    "linkedEntity": "LN-008",
+    "confidentiality": "Confidential",
+    "status": "Verified",
+    "confidence": 91,
+    "uploadedBy": "Amit Verma",
+    "uploadDate": "12 Nov 2022",
+    "fileSize": "3.4 MB",
+    "pageCount": 22,
+    "extractedFields": [
+      { "id": "F-032", "name": "Borrowing Limit", "value": "₹ 25,00,00,000", "confidence": 95, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-025",
+    "name": "7-12 Extract Village Maan Mulshi Taluka Pune.pdf",
+    "type": "Revenue Record",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Public",
+    "status": "Verified",
+    "confidence": 96,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "04 Mar 2016",
+    "fileSize": "1.1 MB",
+    "pageCount": 2,
+    "extractedFields": [
+      { "id": "F-033", "name": "Survey Number", "value": "112/3", "confidence": 99, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-026",
+    "name": "Sale Deed Sahyadri Land to Meridian Realty 2015.pdf",
+    "type": "Title Deed",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 97,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "10 Aug 2015",
+    "fileSize": "8.4 MB",
+    "pageCount": 38,
+    "extractedFields": [
+      { "id": "F-034", "name": "Consideration Amount", "value": "₹ 48,00,00,000", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-027",
+    "name": "Collector NA Sanction Order Hinjewadi Maan.pdf",
+    "type": "Government Approval",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Public",
+    "status": "Verified",
+    "confidence": 93,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "12 Apr 2016",
+    "fileSize": "1.9 MB",
+    "pageCount": 4,
+    "extractedFields": [
+      { "id": "F-035", "name": "Sanctioned Non-Agricultural Area", "value": "12.50 Acres", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-028",
+    "name": "SEIAA Environmental Clearance Hinjewadi Tech Park.pdf",
+    "type": "Environmental Clearance",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Public",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "14 Nov 2018",
+    "fileSize": "3.7 MB",
+    "pageCount": 16,
+    "extractedFields": [
+      { "id": "F-036", "name": "Built Up Area Permitted", "value": "1,45,000 sq.m", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-029",
+    "name": "Advocate Search Report 30 Years Pune Sub-Registrar.pdf",
+    "type": "Legal Search Report",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-001",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "18 Sep 2019",
+    "fileSize": "4.1 MB",
+    "pageCount": 22,
+    "extractedFields": [
+      { "id": "F-037", "name": "Title Opinion", "value": "Clear and Marketable Title", "confidence": 95, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-030",
+    "name": "Karnataka RTC Pahani Extract Whitefield 45-1A.pdf",
+    "type": "Revenue Record",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "P-002",
+    "confidentiality": "Public",
+    "status": "Verified",
+    "confidence": 93,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "15 Jan 2017",
+    "fileSize": "950 KB",
+    "pageCount": 2,
+    "extractedFields": [
+      { "id": "F-038", "name": "Survey Number", "value": "45/1A", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-031",
+    "name": "Sale Deed Whitefield Land Kadugodi Bangalore.pdf",
+    "type": "Title Deed",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "P-002",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 96,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "10 Aug 2017",
+    "fileSize": "7.9 MB",
+    "pageCount": 32,
+    "extractedFields": [
+      { "id": "F-039", "name": "Extent of Land", "value": "8.20 Acres", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-032",
+    "name": "Khasra Pahani & Muntakhab 1954 Survey 89-2 Hyderabad.pdf",
+    "type": "Historical Land Record",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "P-003",
+    "confidentiality": "Internal",
+    "status": "Needs Review",
+    "confidence": 72,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "22 Mar 2025",
+    "fileSize": "5.1 MB",
+    "pageCount": 12,
+    "extractedFields": [
+      { "id": "F-040", "name": "Original Inamdar Entry", "value": "Mirza Asad Baig", "confidence": 72, "status": "Unreviewed", "critical": true, "note": "Urdu script translation requires certified seal" }
+    ]
+  },
+  {
+    "id": "DOC-033",
+    "name": "Development Agreement cum GPA Prasad Infra to Sunrise.pdf",
+    "type": "Development Agreement",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "P-003",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "14 Feb 2018",
+    "fileSize": "6.3 MB",
+    "pageCount": 26,
+    "extractedFields": [
+      { "id": "F-041", "name": "Total Consideration", "value": "₹ 75,00,00,000", "confidence": 95, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-034",
+    "name": "Sale Deed No 1209 of 2018 Gachibowli Hyderabad.pdf",
+    "type": "Title Deed",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "P-003",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "14 Feb 2018",
+    "fileSize": "9.1 MB",
+    "pageCount": 40,
+    "extractedFields": [
+      { "id": "F-042", "name": "Extent", "value": "22.00 Acres", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-035",
+    "name": "Civil Court Injunction Plaint OS 891 of 2025.pdf",
+    "type": "Court Plaint",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "linkedEntity": "M-2025-021",
+    "confidentiality": "Restricted",
+    "status": "Verified",
+    "confidence": 90,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "20 Mar 2025",
+    "fileSize": "7.3 MB",
+    "pageCount": 54,
+    "extractedFields": [
+      { "id": "F-043", "name": "Suit Valuation", "value": "₹ 330,00,00,000", "confidence": 92, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-036",
+    "name": "Palaspe Panvel 7-12 Extract Raigad District.pdf",
+    "type": "Revenue Record",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "P-004",
+    "confidentiality": "Public",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "12 Mar 2012",
+    "fileSize": "1.2 MB",
+    "pageCount": 2,
+    "extractedFields": [
+      { "id": "F-044", "name": "Survey Number", "value": "204/B", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-037",
+    "name": "Panvel Logistics Land Acquisition Award Copy.pdf",
+    "type": "Government Order",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "P-004",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 92,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "15 Feb 2024",
+    "fileSize": "3.8 MB",
+    "pageCount": 14,
+    "extractedFields": [
+      { "id": "F-045", "name": "Acquisition Area", "value": "15.00 Acres", "confidence": 94, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-038",
+    "name": "DRT-I Mumbai Attachment Warrant Panvel Property.pdf",
+    "type": "Court Order",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "linkedEntity": "P-004",
+    "confidentiality": "Restricted",
+    "status": "Verified",
+    "confidence": 94,
+    "uploadedBy": "Ananya Deshmukh",
+    "uploadDate": "16 Feb 2026",
+    "fileSize": "1.4 MB",
+    "pageCount": 3,
+    "extractedFields": [
+      { "id": "F-046", "name": "Attachment Claim", "value": "₹ 112,40,00,000", "confidence": 98, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-039",
+    "name": "Registered Conveyance Deed Chakan Auto Ancillary Park.pdf",
+    "type": "Title Deed",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "linkedEntity": "P-006",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 96,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "15 Apr 2016",
+    "fileSize": "6.7 MB",
+    "pageCount": 26,
+    "extractedFields": [
+      { "id": "F-047", "name": "Survey Number", "value": "101/4", "confidence": 98, "status": "Verified", "critical": true },
+      { "id": "F-048", "name": "Extent", "value": "18.00 Acres", "confidence": 97, "status": "Verified", "critical": true }
+    ]
+  },
+  {
+    "id": "DOC-040",
+    "name": "Registered Sale Deed Sarjapur Residential Enclave.pdf",
+    "type": "Title Deed",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "linkedEntity": "P-007",
+    "confidentiality": "Internal",
+    "status": "Verified",
+    "confidence": 95,
+    "uploadedBy": "Rohan Joshi",
+    "uploadDate": "12 Mar 2018",
+    "fileSize": "5.3 MB",
+    "pageCount": 22,
+    "extractedFields": [
+      { "id": "F-049", "name": "Survey Number", "value": "34/2", "confidence": 97, "status": "Verified", "critical": true },
+      { "id": "F-050", "name": "Extent", "value": "6.50 Acres", "confidence": 96, "status": "Verified", "critical": true }
+    ]
+  }
+]

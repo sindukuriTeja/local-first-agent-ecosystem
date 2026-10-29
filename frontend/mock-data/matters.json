@@ -1,0 +1,342 @@
+[
+  {
+    "id": "M-2025-014",
+    "title": "Northern National Bank vs Meridian Realty Pvt Ltd & Ors",
+    "forum": "Debts Recovery Tribunal-I, Mumbai",
+    "caseNumber": "OA No. 142/2025",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "status": "Ongoing",
+    "assignedLawyer": "Adv. Harish Salve Associates",
+    "lawyerEmail": "counsel@lawfirm.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 1124000000,
+    "nextHearing": "12 Nov 2026",
+    "nextHearingPurpose": "Cross-examination of Bank's Chief Manager on NPA classification date",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      {
+        "id": "F-01",
+        "fact": "Original sanction letter dated 14 Oct 2019 provided 24 months construction moratorium which was improperly curtailed to 18 months in revised sanction.",
+        "source": { "docId": "DOC-012", "docName": "NNB Sanction Letter Ref 4410", "page": 3 },
+        "status": "Verified"
+      },
+      {
+        "id": "F-02",
+        "fact": "Bank classified account as NPA on 31 Dec 2023 despite receiving interest payments of ₹ 4.50 Cr on 28 Dec 2023.",
+        "source": { "docId": "DOC-013", "docName": "NNB Demand Notice U/S 13(2)", "page": 5 },
+        "status": "Verified"
+      },
+      {
+        "id": "F-03",
+        "fact": "Recovery Officer issued provisional attachment order over Panvel Parcel P-004 on 14 Feb 2026 without prior show cause.",
+        "source": { "docId": "DOC-038", "docName": "DRT-I Attachment Warrant", "page": 1 },
+        "status": "Verified"
+      }
+    ],
+    "timeline": [
+      { "date": "14 Oct 2019", "title": "Sanction of ₹ 85.00 Cr Term Loan", "evidence": "Sanction Letter Ref 4410", "docId": "DOC-012" },
+      { "date": "31 Dec 2023", "title": "Disputed NPA Classification by Bank", "evidence": "Internal Bank Memo (obtained under discovery)", "docId": "DOC-013" },
+      { "date": "15 Jan 2024", "title": "Notice Issued u/s 13(2) SARFAESI Act", "evidence": "SARFAESI Demand Notice", "docId": "DOC-013" },
+      { "date": "10 Mar 2025", "title": "Original Application OA 142/2025 filed at DRT-I", "evidence": "OA Petition Copy", "docId": "DOC-014" },
+      { "date": "14 Feb 2026", "title": "Provisional Attachment Warrant issued for Panvel Land", "evidence": "Attachment Warrant", "docId": "DOC-038" },
+      { "date": "15 Sep 2026", "title": "Written Statement filed by Meridian Realty", "evidence": "DRT WS & Counter-Claim", "docId": "DOC-027" }
+    ],
+    "conflicts": [
+      {
+        "title": "NPA Classification Date Discrepancy",
+        "sideA": "Bank asserts default occurred on 30 Sep 2023 based on 90-day overdue rule.",
+        "sourceA": "OA Plaint para 14 (DOC-014)",
+        "sideB": "Bank's own account statement shows RTGS credit of ₹ 4.50 Cr credited on 28 Dec 2023, curing the 90-day trigger.",
+        "sourceB": "Bank Statement Dec 2023 (DOC-016)"
+      }
+    ],
+    "otherSideArguments": [
+      { "point": "Borrower failed to deposit milestone escrow collections directly into designated trap account as mandated by Clause 9 of the facility agreement." },
+      { "point": "Corporate guarantor Meridian Infra Holdings Ltd has not honoured notice of invocation issued in April 2024." }
+    ],
+    "strengths": [
+      "Documentary proof of timely RTGS interest payment before NPA date.",
+      "Clear breach of RBI master circular on NPA classification guidelines.",
+      "Solvent collateral value: Hinjewadi & Panvel parcels exceed ₹ 230 Cr against claim of ₹ 112.40 Cr."
+    ],
+    "weaknesses": [
+      "Escrow account turnover showed occasional delays during monsoon quarters.",
+      "High penal interest accumulation of ₹ 9.10 Cr adds compounding burden."
+    ],
+    "missingInfo": [
+      { "id": "M-INF-01", "item": "Certified copy of Bank Sanction Committee Minutes for Moratorium Revision", "requested": true, "status": "Pending Discovery Application" },
+      { "id": "M-INF-02", "item": "DRT Valuer's Report on Hinjewadi Land valuation", "requested": false, "status": "To be requested" }
+    ],
+    "hearings": [
+      { "date": "12 Nov 2026", "time": "11:30 AM", "bench": "Presiding Officer DRT-I Mumbai", "purpose": "Cross-examination of Bank Witness", "outcome": null },
+      { "date": "18 Sep 2026", "time": "12:00 PM", "bench": "Presiding Officer DRT-I Mumbai", "purpose": "Arguments on Interim Injunction against auction", "outcome": "Auction stayed subject to verification of statement of account" }
+    ],
+    "linkedLoans": ["LN-001"],
+    "linkedParcels": ["P-001", "P-004"]
+  },
+  {
+    "id": "M-2025-021",
+    "title": "Civil Title Suit: Mirza Asad Baig Legal Heirs vs Sunrise Developers Pvt Ltd",
+    "forum": "City Civil Court, Hyderabad",
+    "caseNumber": "OS No. 891/2025",
+    "companyId": "COMP-005",
+    "companyName": "Sunrise Developers Pvt Ltd",
+    "status": "Ongoing",
+    "assignedLawyer": "Ananya Deshmukh",
+    "lawyerEmail": "legal@meridianinfra.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 3300000000,
+    "nextHearing": "04 Nov 2026",
+    "nextHearingPurpose": "Hearing on IA No. 4/2025 (Temporary Injunction restraining construction)",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      {
+        "id": "F-11",
+        "fact": "Plaintiffs claim ancestral title through 1954 Inam grant claiming Survey 89/2 was Maqta land not extinguished by Inams Abolition Act.",
+        "source": { "docId": "DOC-032", "docName": "Muntakhab & Khasra Pahani 1954", "page": 4 },
+        "status": "Verified"
+      },
+      {
+        "id": "F-12",
+        "fact": "Special Chief Secretary Revenue, Telangana affirmed Ryotwari Patta issued to vendor's predecessor in 1978 under Section 4 of Inams Act.",
+        "source": { "docId": "DOC-034", "docName": "Sale Deed No. 1209/2018", "page": 12 },
+        "status": "Verified"
+      }
+    ],
+    "timeline": [
+      { "date": "12 Feb 2018", "title": "Purchase of Survey 89/2 (22 acres) by Sunrise Developers", "evidence": "Registered Sale Deed No. 1209/2018", "docId": "DOC-034" },
+      { "date": "18 Mar 2025", "title": "Plaint filed in OS 891/2025 claiming partition and declaration", "evidence": "Plaint copy", "docId": "DOC-035" },
+      { "date": "10 Aug 2025", "title": "Written Statement filed proving 45 years peaceful possession", "evidence": "Written Statement & 30-year pahanis", "docId": "DOC-033" }
+    ],
+    "conflicts": [
+      {
+        "title": "Nature of Inam Grant (Personal Inam vs Service Inam)",
+        "sideA": "Plaintiffs allege land was Madad-e-Maash inam protected under religious trust exemptions.",
+        "sourceA": "Plaint para 8 (DOC-035)",
+        "sideB": "Revenue records and Nazim Atiyat orders prove absolute conversion to patta land in 1978.",
+        "sourceB": "Atiyat Department Certified Order 1978 (DOC-032)"
+      }
+    ],
+    "otherSideArguments": [
+      { "point": "The succession of original inamdar was never formally sanctioned under Atiyat proceedings." }
+    ],
+    "strengths": [
+      "Consistent mutation entries in Dharani portal and registered sale deeds dating back 45 years.",
+      "Clear precedent of Telangana High Court upholding Section 4 Patta in identical neighbouring survey numbers."
+    ],
+    "weaknesses": [
+      "Temporary stay on construction might delay financing draws from Coastal Finance Ltd."
+    ],
+    "missingInfo": [
+      { "id": "M-INF-03", "item": "Certified copy of 1978 Nazim Atiyat order from State Archives Hyderabad", "requested": true, "status": "Application pending with Archives Director" }
+    ],
+    "hearings": [
+      { "date": "04 Nov 2026", "time": "10:45 AM", "bench": "VI Addl Senior Civil Judge, Hyderabad", "purpose": "Arguments on Injunction IA", "outcome": null }
+    ],
+    "linkedLoans": ["LN-002"],
+    "linkedParcels": ["P-003"]
+  },
+  {
+    "id": "M-2026-003",
+    "title": "Zenith Infra Projects vs Meridian Infra Holdings Ltd (IBC S.9)",
+    "forum": "NCLT Mumbai Bench-II",
+    "caseNumber": "CP(IB) No. 340/MB/2026",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "status": "Pre-admission Settlement",
+    "assignedLawyer": "Adv. Harish Salve Associates",
+    "lawyerEmail": "counsel@lawfirm.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 48200000,
+    "nextHearing": "18 Nov 2026",
+    "nextHearingPurpose": "Reporting of consent terms / withdrawal under Section 12A IBC",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      {
+        "id": "F-21",
+        "fact": "Operational creditor claimed unpaid invoices of ₹ 4.82 Cr for structural steel supply at Lower Parel site.",
+        "source": { "docId": "DOC-003", "docName": "IBC Section 8 Demand Notice", "page": 2 },
+        "status": "Verified"
+      },
+      {
+        "id": "F-22",
+        "fact": "Pre-existing dispute was raised via email dated 12 Dec 2025 citing laboratory rejection of sub-standard steel tensile strength.",
+        "source": { "docId": "DOC-005", "docName": "Metallurgical Lab Rejection Report", "page": 1 },
+        "status": "Verified"
+      }
+    ],
+    "timeline": [
+      { "date": "12 Dec 2025", "title": "Defective Steel Notice and Rejection", "evidence": "Quality Audit Report", "docId": "DOC-005" },
+      { "date": "14 Jan 2026", "title": "Operational Creditor Demand Notice under Section 8 IBC", "evidence": "S.8 Notice", "docId": "DOC-003" },
+      { "date": "15 Feb 2026", "title": "Section 9 Petition filed at NCLT Mumbai", "evidence": "CP(IB) 340/2026 Plaint", "docId": "DOC-003" },
+      { "date": "05 Oct 2026", "title": "Bipartite settlement talks concluded at ₹ 3.20 Cr in two tranches", "evidence": "Draft Consent Terms", "docId": "DOC-007" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [
+      { "point": "Delivery challans were signed by project supervisor without remark at time of unloading." }
+    ],
+    "strengths": [
+      "Clear pre-existing dispute prior to receipt of Section 8 notice (Mobilox Innovations test satisfied).",
+      "Draft consent terms agreed; awaiting final Board approval and first tranche release."
+    ],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [
+      { "date": "18 Nov 2026", "time": "10:30 AM", "bench": "Judicial Member & Technical Member, NCLT Bench-II", "purpose": "Presentation of Settlement & Section 12A withdrawal", "outcome": null }
+    ],
+    "linkedLoans": [],
+    "linkedParcels": []
+  },
+  {
+    "id": "M-2026-009",
+    "title": "Meridian Infra Holdings vs State of Maharashtra (Land Acquisition Reference)",
+    "forum": "High Court of Bombay",
+    "caseNumber": "WP No. 4102/2026",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "status": "Ongoing",
+    "assignedLawyer": "Ananya Deshmukh",
+    "lawyerEmail": "legal@meridianinfra.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 185000000,
+    "nextHearing": "28 Nov 2026",
+    "nextHearingPurpose": "Final hearing on compensation enhancement under RFCTLARR Act 2013",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      { "id": "F-31", "fact": "Special Land Acquisition Officer awarded ₹ 42 Lakh/acre against prevailing market rate of ₹ 1.60 Cr/acre.", "source": { "docId": "DOC-037", "docName": "SLAO Award Notice", "page": 3 }, "status": "Verified" }
+    ],
+    "timeline": [
+      { "date": "10 Feb 2024", "title": "Section 11 Preliminary Notification for Highway Widening", "evidence": "Gazette Notification", "docId": "DOC-037" },
+      { "date": "12 Mar 2026", "title": "Writ Petition filed challenging inadequate award", "evidence": "WP Memo", "docId": "DOC-037" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [{ "point": "State claims agricultural index rate must apply rather than commercial development potential." }],
+    "strengths": ["Comparable sale deeds of adjacent industrial corridors within 500 meters justify ₹ 1.60 Cr/acre."],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [{ "date": "28 Nov 2026", "time": "02:30 PM", "bench": "Division Bench, Bombay High Court", "purpose": "Final arguments on market value", "outcome": null }],
+    "linkedLoans": [],
+    "linkedParcels": ["P-004"]
+  },
+  {
+    "id": "M-2026-015",
+    "title": "EPC Arbitration: Larsen-Bridgecon JV vs Meridian Projects LLP",
+    "forum": "Arbitral Tribunal (Sole Arbitrator Justice Retd. Sharma)",
+    "caseNumber": "ARB No. 09/2026",
+    "companyId": "COMP-004",
+    "companyName": "Meridian Projects LLP",
+    "status": "Ongoing",
+    "assignedLawyer": "Adv. Harish Salve Associates",
+    "lawyerEmail": "counsel@lawfirm.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 142000000,
+    "nextHearing": "08 Dec 2026",
+    "nextHearingPurpose": "Filing of Statement of Claim and Delay Analysis by Claimant",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      { "id": "F-41", "fact": "Claimant claims compensation for 180 days prolongation delay at Devanahalli site.", "source": { "docId": "DOC-007", "docName": "EPC Contract Agreement", "page": 18 }, "status": "Verified" }
+    ],
+    "timeline": [
+      { "date": "15 Jan 2026", "title": "Notice of Arbitration invoked under Clause 28 of EPC contract", "evidence": "Invocation Letter", "docId": "DOC-007" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [{ "point": "Delay in handing over unencumbered access to Sector B of Aero Park." }],
+    "strengths": ["Liquidated damages deduction of ₹ 14.2 Cr supported by independent project engineer certificate."],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [{ "date": "08 Dec 2026", "time": "04:00 PM", "bench": "Sole Arbitrator Chamber, Mumbai", "purpose": "Procedural hearing and timetable", "outcome": null }],
+    "linkedLoans": ["LN-003"],
+    "linkedParcels": ["P-005"]
+  },
+  {
+    "id": "M-2026-022",
+    "title": "SARFAESI S.14 Challenge: Meridian Realty vs NNB (Chief Metropolitan Magistrate)",
+    "forum": "Chief Metropolitan Magistrate Court, Mumbai",
+    "caseNumber": "Sec. 14 Case No. 81/2026",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "status": "Hearing Scheduled",
+    "assignedLawyer": "Ananya Deshmukh",
+    "lawyerEmail": "legal@meridianinfra.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 1124000000,
+    "nextHearing": "15 Nov 2026",
+    "nextHearingPurpose": "Objections to appointment of Advocate Commissioner for physical possession",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      { "id": "F-51", "fact": "Affidavit filed by bank authorized officer suppressed the existing stay order granted by DRT-I on 18 Sep 2026.", "source": { "docId": "DOC-013", "docName": "DRT Stay Order", "page": 1 }, "status": "Verified" }
+    ],
+    "timeline": [
+      { "date": "22 Sep 2026", "title": "Application filed by NNB u/s 14 SARFAESI", "evidence": "CMM Application", "docId": "DOC-013" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [{ "point": "Bank contends DRT stay was conditional and conditions were not complied with." }],
+    "strengths": ["Clear perjury and suppression of facts by bank officer u/s 14 affidavit."],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [{ "date": "15 Nov 2026", "time": "03:00 PM", "bench": "CMM Esplanade Court, Mumbai", "purpose": "Consideration of Reply and dismissal application", "outcome": null }],
+    "linkedLoans": ["LN-001"],
+    "linkedParcels": ["P-001"]
+  },
+  {
+    "id": "M-2026-028",
+    "title": "Meridian Estates vs BBMP (Zonal Master Plan Modification)",
+    "forum": "High Court of Karnataka",
+    "caseNumber": "WP No. 19284/2026",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "status": "Ongoing",
+    "assignedLawyer": "Ananya Deshmukh",
+    "lawyerEmail": "legal@meridianinfra.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 0,
+    "nextHearing": "02 Dec 2026",
+    "nextHearingPurpose": "Filing of status report by Bangalore Development Authority",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      { "id": "F-61", "fact": "Master Plan R-3 buffer zone of 15m was retroactively expanded to 30m without public consultation.", "source": { "docId": "DOC-031", "docName": "BBMP Zonal Plan 2031", "page": 7 }, "status": "Verified" }
+    ],
+    "timeline": [
+      { "date": "08 Jul 2026", "title": "Writ Petition filed", "evidence": "WP Filing Memo", "docId": "DOC-031" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [{ "point": "Buffer zone expansion is mandatory under National Green Tribunal circulars." }],
+    "strengths": ["Prior approved sanctions created vested developmental rights."],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [{ "date": "02 Dec 2026", "time": "11:00 AM", "bench": "Single Judge, Karnataka High Court", "purpose": "Hearing on interim relief", "outcome": null }],
+    "linkedLoans": [],
+    "linkedParcels": ["P-002"]
+  },
+  {
+    "id": "M-2026-031",
+    "title": "Om Logistics vs Meridian Infra Holdings (S.138 NI Act)",
+    "forum": "Metropolitan Magistrate Court, Mumbai",
+    "caseNumber": "CC No. 1290/SS/2026",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "status": "Compoundable Stage",
+    "assignedLawyer": "Ananya Deshmukh",
+    "lawyerEmail": "legal@meridianinfra.in",
+    "internalCounsel": "Ananya Deshmukh",
+    "claimAmount": 6500000,
+    "nextHearing": "21 Nov 2026",
+    "nextHearingPurpose": "Compounding / Payment of settled sum of ₹ 55 Lakhs",
+    "reviewStatus": "Lawyer review pending",
+    "facts": [
+      { "id": "F-71", "fact": "Cheque of ₹ 65 Lakhs was issued as security and banked without authorization after dispute.", "source": { "docId": "DOC-002", "docName": "Security Cheque Endorsement Memo", "page": 1 }, "status": "Verified" }
+    ],
+    "timeline": [
+      { "date": "14 May 2026", "title": "Dishonour Notice received", "evidence": "Legal Notice", "docId": "DOC-002" }
+    ],
+    "conflicts": [],
+    "otherSideArguments": [{ "point": "Signed cheque constitutes legally enforceable debt under S.139 presumption." }],
+    "strengths": ["Complainant agreed in writing to compound upon ₹ 55 Lakh payment."],
+    "weaknesses": [],
+    "missingInfo": [],
+    "hearings": [{ "date": "21 Nov 2026", "time": "02:00 PM", "bench": "33rd Court Ballard Pier, Mumbai", "purpose": "Consent terms and compounding", "outcome": null }],
+    "linkedLoans": [],
+    "linkedParcels": []
+  }
+]

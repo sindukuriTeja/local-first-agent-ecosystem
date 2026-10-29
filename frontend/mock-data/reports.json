@@ -1,0 +1,50 @@
+[
+  {
+    "id": "REP-001",
+    "name": "Group Executive Portfolio & Debt Summary",
+    "frequency": "Weekly (Every Monday 08:00 AM)",
+    "template": "Executive Board Pack",
+    "recipients": ["Vikramaditya Singhania", "Rajesh Sharma", "Amit Verma"],
+    "lastRun": "27 Oct 2026, 08:00 AM",
+    "nextRun": "03 Nov 2026, 08:00 AM",
+    "status": "Active",
+    "format": "PDF",
+    "requiresApproval": true
+  },
+  {
+    "id": "REP-002",
+    "name": "Litigation & Dispute Risk Assessment",
+    "frequency": "Monthly (1st of month)",
+    "template": "Legal Risk Register",
+    "recipients": ["Ananya Deshmukh", "Vikramaditya Singhania"],
+    "lastRun": "01 Oct 2026, 09:00 AM",
+    "nextRun": "01 Nov 2026, 09:00 AM",
+    "status": "Active",
+    "format": "Word",
+    "requiresApproval": false
+  },
+  {
+    "id": "REP-003",
+    "name": "Statutory Filings & Secretarial Calendar",
+    "frequency": "Fortnightly (Alternate Wednesdays)",
+    "template": "Secretarial Compliance Tracker",
+    "recipients": ["Priya Nambiar", "Rajesh Sharma"],
+    "lastRun": "21 Oct 2026, 09:00 AM",
+    "nextRun": "04 Nov 2026, 09:00 AM",
+    "status": "Active",
+    "format": "Excel",
+    "requiresApproval": false
+  },
+  {
+    "id": "REP-004",
+    "name": "Tax Notices Exposure & Pre-Deposit Ledger",
+    "frequency": "Monthly (Last Friday)",
+    "template": "Tax Demand Tracker",
+    "recipients": ["Suresh Kulkarni", "Amit Verma"],
+    "lastRun": "25 Sep 2026, 05:00 PM",
+    "nextRun": "30 Oct 2026, 05:00 PM",
+    "status": "Active",
+    "format": "PDF",
+    "requiresApproval": true
+  }
+]

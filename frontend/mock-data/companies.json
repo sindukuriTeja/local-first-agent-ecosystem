@@ -1,0 +1,247 @@
+[
+  {
+    "id": "COMP-001",
+    "name": "Meridian Infra Holdings Ltd",
+    "shortName": "Holdings",
+    "cin": "U45200MH2010PLC201948",
+    "type": "Parent",
+    "status": "Active",
+    "incorporationDate": "14 May 2010",
+    "registeredOffice": "Level 14, Meridian Tower, Senapati Bapat Marg, Lower Parel, Mumbai 400013",
+    "complianceStatus": "Compliant",
+    "nextFilingDue": "30 Nov 2026",
+    "authorizedCapital": 1500000000,
+    "paidUpCapital": 1200000000,
+    "directors": [
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Managing Director", "appointedDate": "14 May 2010", "status": "Active" },
+      { "din": "02345678", "name": "Sunita Singhania", "designation": "Whole-time Director", "appointedDate": "20 Jun 2012", "status": "Active" },
+      { "din": "03456789", "name": "Ramesh Chandra Gupta", "designation": "Independent Director", "appointedDate": "15 Sep 2018", "status": "Active" }
+    ],
+    "kmp": [
+      { "name": "Priya Nambiar", "role": "Company Secretary", "appointedDate": "01 Aug 2017" },
+      { "name": "Amit Verma", "role": "Chief Financial Officer", "appointedDate": "10 Jan 2019" }
+    ],
+    "shareholding": [
+      { "holder": "Singhania Family Trust", "category": "Promoter", "shares": 72000000, "percentage": 60.0 },
+      { "holder": "Global Realty Opportunities Fund", "category": "FII / Institutional", "shares": 24000000, "percentage": 20.0 },
+      { "holder": "Public & Key Employees", "category": "Public", "shares": 24000000, "percentage": 20.0 }
+    ],
+    "linkedLoans": ["LN-004", "LN-005"],
+    "linkedParcels": ["P-004", "P-011"],
+    "linkedMatters": ["M-2026-003"],
+    "sources": [
+      { "field": "cin", "docId": "DOC-001", "docName": "Certificate of Incorporation", "page": 1 },
+      { "field": "registeredOffice", "docId": "DOC-002", "docName": "Form INC-22 Filing Receipt", "page": 2 },
+      { "field": "paidUpCapital", "docId": "DOC-003", "docName": "Annual Return MGT-7 FY25", "page": 4 }
+    ]
+  },
+  {
+    "id": "COMP-002",
+    "name": "Meridian Realty Pvt Ltd",
+    "shortName": "Realty",
+    "cin": "U70102MH2014PTC254891",
+    "type": "Subsidiary",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "18 Mar 2014",
+    "registeredOffice": "Level 14, Meridian Tower, Senapati Bapat Marg, Lower Parel, Mumbai 400013",
+    "complianceStatus": "Attention Required",
+    "nextFilingDue": "15 Nov 2026",
+    "authorizedCapital": 500000000,
+    "paidUpCapital": 450000000,
+    "directors": [
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Director", "appointedDate": "18 Mar 2014", "status": "Active" },
+      { "din": "04567890", "name": "Karan Malhotra", "designation": "Director", "appointedDate": "01 Apr 2016", "status": "Active" }
+    ],
+    "kmp": [
+      { "name": "Priya Nambiar", "role": "Company Secretary", "appointedDate": "01 Aug 2017" }
+    ],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Holding Co", "shares": 44550000, "percentage": 99.0 },
+      { "holder": "Vikramaditya Singhania (Nominee)", "category": "Nominee", "shares": 450000, "percentage": 1.0 }
+    ],
+    "linkedLoans": ["LN-001"],
+    "linkedParcels": ["P-001", "P-006"],
+    "linkedMatters": ["M-2025-014", "M-2026-022"],
+    "sources": [
+      { "field": "cin", "docId": "DOC-004", "docName": "Certificate of Incorporation - Realty", "page": 1 },
+      { "field": "paidUpCapital", "docId": "DOC-005", "docName": "Audited Balance Sheet FY25", "page": 3 }
+    ]
+  },
+  {
+    "id": "COMP-003",
+    "name": "Meridian Estates Pvt Ltd",
+    "shortName": "Estates",
+    "cin": "U70109KA2016PTC091234",
+    "type": "Subsidiary",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "22 Jul 2016",
+    "registeredOffice": "No. 88, 5th Main, Indiranagar 2nd Stage, Bengaluru 560038",
+    "complianceStatus": "Compliant",
+    "nextFilingDue": "30 Nov 2026",
+    "authorizedCapital": 300000000,
+    "paidUpCapital": 280000000,
+    "directors": [
+      { "din": "02345678", "name": "Sunita Singhania", "designation": "Director", "appointedDate": "22 Jul 2016", "status": "Active" },
+      { "din": "05678901", "name": "Anil Rao", "designation": "Director", "appointedDate": "10 Oct 2017", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Holding Co", "shares": 28000000, "percentage": 100.0 }
+    ],
+    "linkedLoans": ["LN-002"],
+    "linkedParcels": ["P-002", "P-007"],
+    "linkedMatters": ["M-2026-028"],
+    "sources": [
+      { "field": "cin", "docId": "DOC-006", "docName": "MOA & AOA Meridian Estates", "page": 1 }
+    ]
+  },
+  {
+    "id": "COMP-004",
+    "name": "Meridian Projects LLP",
+    "shortName": "Projects LLP",
+    "cin": "LLPIN: AAB-4921",
+    "type": "JV",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "05 Nov 2019",
+    "registeredOffice": "Level 14, Meridian Tower, Senapati Bapat Marg, Lower Parel, Mumbai 400013",
+    "complianceStatus": "Overdue Filing",
+    "nextFilingDue": "15 Oct 2026",
+    "authorizedCapital": 200000000,
+    "paidUpCapital": 200000000,
+    "directors": [
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Designated Partner", "appointedDate": "05 Nov 2019", "status": "Active" },
+      { "din": "06789012", "name": "Rajiv Nambiar", "designation": "Designated Partner (JV Nominee)", "appointedDate": "05 Nov 2019", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Partner (50%)", "shares": 10000000, "percentage": 50.0 },
+      { "holder": "Apex Urban Developers Ltd", "category": "JV Partner (50%)", "shares": 10000000, "percentage": 50.0 }
+    ],
+    "linkedLoans": ["LN-003"],
+    "linkedParcels": ["P-005"],
+    "linkedMatters": ["M-2026-015"],
+    "sources": [
+      { "field": "cin", "docId": "DOC-007", "docName": "LLP Agreement Form 3", "page": 2 }
+    ]
+  },
+  {
+    "id": "COMP-005",
+    "name": "Sunrise Developers Pvt Ltd",
+    "shortName": "Sunrise",
+    "cin": "U45201TG2018PTC125890",
+    "type": "Associate",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "12 Feb 2018",
+    "registeredOffice": "Plot 42, Road No 36, Jubilee Hills, Hyderabad 500033",
+    "complianceStatus": "Under Litigation",
+    "nextFilingDue": "30 Nov 2026",
+    "authorizedCapital": 100000000,
+    "paidUpCapital": 85000000,
+    "directors": [
+      { "din": "07890123", "name": "Siddharth Reddy", "designation": "Managing Director", "appointedDate": "12 Feb 2018", "status": "Active" },
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Director (Nominee)", "appointedDate": "01 May 2019", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Associate Investor", "shares": 2805000, "percentage": 33.0 },
+      { "holder": "Reddy Family Promoters", "category": "Promoter", "shares": 5695000, "percentage": 67.0 }
+    ],
+    "linkedLoans": ["LN-006"],
+    "linkedParcels": ["P-003"],
+    "linkedMatters": ["M-2025-021"],
+    "sources": [
+      { "field": "cin", "docId": "DOC-008", "docName": "Shareholders Agreement Sunrise", "page": 4 }
+    ]
+  },
+  {
+    "id": "COMP-006",
+    "name": "Meridian Coastal Logistics Pvt Ltd",
+    "shortName": "Coastal Logistics",
+    "cin": "U63030MH2017PTC298412",
+    "type": "Subsidiary",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "09 Aug 2017",
+    "registeredOffice": "Sector 11, CBD Belapur, Navi Mumbai 400614",
+    "complianceStatus": "Compliant",
+    "nextFilingDue": "30 Nov 2026",
+    "authorizedCapital": 150000000,
+    "paidUpCapital": 120000000,
+    "directors": [
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Director", "appointedDate": "09 Aug 2017", "status": "Active" },
+      { "din": "08901234", "name": "Pradip Sawant", "designation": "Executive Director", "appointedDate": "15 Sep 2018", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Holding Co", "shares": 12000000, "percentage": 100.0 }
+    ],
+    "linkedLoans": ["LN-007"],
+    "linkedParcels": ["P-010"],
+    "linkedMatters": [],
+    "sources": [
+      { "field": "cin", "docId": "DOC-009", "docName": "Incorporation Certificate Coastal", "page": 1 }
+    ]
+  },
+  {
+    "id": "COMP-007",
+    "name": "Horizon Land Holdings LLP",
+    "shortName": "Horizon Land",
+    "cin": "LLPIN: AAC-1092",
+    "type": "Subsidiary",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "14 Jan 2021",
+    "registeredOffice": "Plot 19, Financial District, Nanakramguda, Hyderabad 500032",
+    "complianceStatus": "Compliant",
+    "nextFilingDue": "30 Dec 2026",
+    "authorizedCapital": 80000000,
+    "paidUpCapital": 80000000,
+    "directors": [
+      { "din": "04567890", "name": "Karan Malhotra", "designation": "Designated Partner", "appointedDate": "14 Jan 2021", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Partner (95%)", "shares": 7600000, "percentage": 95.0 },
+      { "holder": "Meridian Realty Pvt Ltd", "category": "Partner (5%)", "shares": 400000, "percentage": 5.0 }
+    ],
+    "linkedLoans": ["LN-008"],
+    "linkedParcels": ["P-009"],
+    "linkedMatters": [],
+    "sources": [
+      { "field": "cin", "docId": "DOC-010", "docName": "LLP Agreement Horizon", "page": 1 }
+    ]
+  },
+  {
+    "id": "COMP-008",
+    "name": "Meridian Solar Park Pvt Ltd",
+    "shortName": "Solar Park",
+    "cin": "U40106MH2022PTC384192",
+    "type": "Subsidiary",
+    "parent": "COMP-001",
+    "status": "Active",
+    "incorporationDate": "11 May 2022",
+    "registeredOffice": "MIDC Area, Chincholi, Solapur 413255",
+    "complianceStatus": "Compliant",
+    "nextFilingDue": "15 Dec 2026",
+    "authorizedCapital": 100000000,
+    "paidUpCapital": 90000000,
+    "directors": [
+      { "din": "01234567", "name": "Vikramaditya Singhania", "designation": "Director", "appointedDate": "11 May 2022", "status": "Active" },
+      { "din": "05678901", "name": "Anil Rao", "designation": "Director", "appointedDate": "11 May 2022", "status": "Active" }
+    ],
+    "kmp": [],
+    "shareholding": [
+      { "holder": "Meridian Infra Holdings Ltd", "category": "Holding Co", "shares": 9000000, "percentage": 100.0 }
+    ],
+    "linkedLoans": [],
+    "linkedParcels": ["P-008"],
+    "linkedMatters": [],
+    "sources": [
+      { "field": "cin", "docId": "DOC-011", "docName": "Solar Park Certificate of Incorporation", "page": 1 }
+    ]
+  }
+]

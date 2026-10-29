@@ -1,10 +1,7 @@
+import { resolve } from 'path'
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 
-// The built SPA is served by the FastAPI backend (frontend/dist). In dev we
-// proxy /api and legacy routes to a local backend on :8000.
 export default defineConfig({
-  plugins: [react()],
   server: {
     port: 5173,
     proxy: {
@@ -20,5 +17,17 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        roles: resolve(__dirname, 'roles.html'),
+        login: resolve(__dirname, 'login.html'),
+        workspace: resolve(__dirname, 'workspace.html'),
+        signup: resolve(__dirname, 'signup.html'),
+        forgot: resolve(__dirname, 'forgot-password.html'),
+        notfound: resolve(__dirname, '404.html'),
+        error500: resolve(__dirname, '500.html'),
+      },
+    },
   },
 })

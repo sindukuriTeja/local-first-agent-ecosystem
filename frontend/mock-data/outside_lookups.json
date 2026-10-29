@@ -1,0 +1,35 @@
+[
+  {
+    "id": "OLL-001",
+    "timestamp": "28 Oct 2026, 09:20 AM",
+    "rawQueryOrigin": "Does Northern National Bank have power under Section 14 SARFAESI to take possession when DRT granted stay on 18 Sep 2026 for Hinjewadi parcel?",
+    "cleanedQuerySent": "Can secured creditor enforce Section 14 SARFAESI possession during pendency of conditional interim stay granted by Debts Recovery Tribunal?",
+    "privateDetailsRemovedNote": "Company names, bank names, asset location ('Hinjewadi'), and specific stay dates removed prior to external API dispatch.",
+    "externalSourceUsed": "IndianKanoon API / Supreme Court Case Repository",
+    "tokensUsed": 1420,
+    "costUSD": "$0.0042",
+    "status": "Verified Safe"
+  },
+  {
+    "id": "OLL-002",
+    "timestamp": "27 Oct 2026, 03:10 PM",
+    "rawQueryOrigin": "What is the limitation period to file appeal against IT assessment order dated 15 Sep 2026 demanding ₹ 1.48 Cr for Meridian Holdings?",
+    "cleanedQuerySent": "Statutory limitation period for filing appeal before Commissioner of Income Tax (Appeals) against assessment order under Section 246A Income Tax Act 1961.",
+    "privateDetailsRemovedNote": "Assessee name ('Meridian Holdings'), exact demand amount ('₹ 1.48 Cr'), and PAN references redacted.",
+    "externalSourceUsed": "Income Tax Appellate Database / Official Gazette",
+    "tokensUsed": 980,
+    "costUSD": "$0.0028",
+    "status": "Verified Safe"
+  },
+  {
+    "id": "OLL-003",
+    "timestamp": "25 Oct 2026, 11:45 AM",
+    "rawQueryOrigin": "Is Mirza Asad Baig succession valid under Atiyat Enquiries Act 1952 for Survey 89/2 Gachibowli?",
+    "cleanedQuerySent": "Recognition of succession under Telangana Atiyat Enquiries Act 1952 versus grant of Occupancy Rights Certificate under Inams Abolition Act.",
+    "privateDetailsRemovedNote": "Individual claimant names, Survey Number ('89/2'), and district details stripped.",
+    "externalSourceUsed": "Telangana Law Reporter Digital Archive",
+    "tokensUsed": 1640,
+    "costUSD": "$0.0051",
+    "status": "Verified Safe"
+  }
+]

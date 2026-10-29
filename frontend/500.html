@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Nushift — 500 Server Error" />
+    <meta name="color-scheme" content="dark light" />
+    <title>500 Server Error | Nushift</title>
+
+    <!-- Favicon: 32px gradient circle -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%238B7BFF'/%3E%3Cstop offset='100%25' stop-color='%2322D3EE'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='14' fill='url(%23g)'/%3E%3C/svg%3E"
+    />
+
+    <!-- Google Fonts: Sora & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Pre-paint Theme Script -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('nushift_theme') || localStorage.getItem('lfae_theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
+
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body style="display: flex; flex-direction: column; min-height: 100vh;">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Sticky Header -->
+    <header class="site-header" role="banner">
+      <a href="index.html" class="brand-logo" aria-label="Nushift Home">
+        <span class="logo-core-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
+        <span>Nushift</span>
+      </a>
+
+      <div class="header-right">
+        <button
+          type="button"
+          class="btn btn-theme-toggle btn-circle"
+          data-theme-toggle
+          aria-label="Switch theme"
+        ></button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 24px;">
+      <div style="width: 100%; max-width: 520px; text-align: center;">
+        <div class="glass-card card-pad-lg" style="box-shadow: var(--shadow-md);">
+          <!-- Error Badge -->
+          <span class="badge badge-error" style="margin-bottom: 20px; font-size: 13px; padding: 6px 14px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <span>Error 500</span>
+          </span>
+
+          <h1 class="h2-title" style="margin-bottom: 12px;">System encountered an issue</h1>
+          <p class="text-small" style="margin-bottom: 32px; font-size: 15px;">
+            Your local session and disk state remain secure and uncorrupted. The orchestrator failed to complete the requested operation.
+          </p>
+
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="location.reload()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span>Try again</span>
+            </button>
+            <a href="mailto:admin@firm.internal?subject=Nushift%20System%20Issue" class="btn btn-ghost">
+              <span>Contact admin</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer style="text-align: center; padding: 24px 16px; border-top: 1px solid var(--bd); font-size: 13px; color: var(--mu);">
+      <p>© 2026 Nushift. Law, tax and compliance, shifted into one intelligent workspace.</p>
+    </footer>
+
+    <script type="module" src="/src/app.js"></script>
+    <script type="module">
+      import { initCommonUI } from '/src/app.js';
+      document.addEventListener('DOMContentLoaded', initCommonUI);
+    </script>
+  </body>
+</html>

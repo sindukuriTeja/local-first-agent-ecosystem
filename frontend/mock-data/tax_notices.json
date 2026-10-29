@@ -1,0 +1,247 @@
+[
+  {
+    "id": "TAX-081",
+    "noticeNumber": "GST/DRC-01/2026/8912",
+    "taxType": "GST (Goods & Services Tax)",
+    "section": "Section 73(1) CGST Act, 2017",
+    "financialYear": "FY 2021-22",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "issuingAuthority": "Deputy Commissioner of State Tax, Large Taxpayers Unit-2, Mumbai",
+    "demandAmount": 18400000,
+    "demandFormatted": "₹ 1.84 Cr",
+    "interestPenalty": 5800000,
+    "totalRiskAmount": 24200000,
+    "issueDate": "06 Oct 2026",
+    "dueDate": "06 Nov 2026",
+    "daysLeft": 9,
+    "status": "Reply Pending",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 0,
+    "allegation": "Alleged excess Input Tax Credit (ITC) claim in GSTR-3B compared to auto-populated GSTR-2A by ₹ 1.84 Cr on construction civil works sub-contracts.",
+    "factSheet": [
+      {
+        "point": "Vendors have declared and paid tax in their respective GSTR-1 as verified via supplier invoice reconciliation.",
+        "source": { "docId": "DOC-005", "docName": "GSTR-2B vs GSTR-3B Reconciliation FY22", "page": 2 }
+      },
+      {
+        "point": "Circular No. 183/15/2022-GST dated 27 Dec 2022 allows CA certification for bona fide mismatches where supplier has filed tax.",
+        "source": { "docId": "DOC-005", "docName": "Statutory Auditor Certificate u/c 183", "page": 1 }
+      }
+    ],
+    "appealTimeline": [
+      { "stage": "Show Cause Notice DRC-01", "date": "06 Oct 2026", "status": "Pending Reply Submission" }
+    ],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-005"]
+  },
+  {
+    "id": "TAX-042",
+    "noticeNumber": "IT/143(3)/2026/4109",
+    "taxType": "Income Tax",
+    "section": "Section 143(3) r.w.s. 144B Assessment Order",
+    "financialYear": "FY 2022-23 (AY 2023-24)",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "issuingAuthority": "National Faceless Assessment Centre (NFAC), Delhi",
+    "demandAmount": 14800000,
+    "demandFormatted": "₹ 1.48 Cr",
+    "interestPenalty": 3200000,
+    "totalRiskAmount": 18000000,
+    "issueDate": "15 Sep 2026",
+    "dueDate": "15 Nov 2026",
+    "daysLeft": 18,
+    "status": "Appeal in Preparation",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 2960000,
+    "allegation": "Disallowance of Section 36(1)(iii) proportionate borrowing cost on land inventory additions amounting to ₹ 4.60 Cr resulting in net demand of ₹ 1.48 Cr.",
+    "factSheet": [
+      {
+        "point": "Company had sufficient interest-free shareholder funds of ₹ 120 Cr to fund parcel acquisition without utilizing bank loans.",
+        "source": { "docId": "DOC-003", "docName": "Audited Balance Sheet Meridian Holdings FY23", "page": 14 }
+      },
+      {
+        "point": "Supreme Court ruling in Reliance Utilities & Power (313 ITR 340) directly governs presumption of own funds utilization.",
+        "source": { "docId": "DOC-003", "docName": "Legal Precedent Note - S.36(1)(iii)", "page": 1 }
+      }
+    ],
+    "appealTimeline": [
+      { "stage": "Draft Assessment Order", "date": "10 Aug 2026", "status": "Responded" },
+      { "stage": "Final Assessment Order u/s 143(3)", "date": "15 Sep 2026", "status": "Appeal to CIT(A) Drafted" }
+    ],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-003"]
+  },
+  {
+    "id": "TAX-019",
+    "noticeNumber": "IGR/STAMP/DEF/2026/21",
+    "taxType": "Stamp Duty & Registration",
+    "section": "Section 32A Maharashtra Stamp Act, 1958",
+    "financialYear": "FY 2023-24",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "issuingAuthority": "Joint District Registrar & Collector of Stamps, Pune",
+    "demandAmount": 6250000,
+    "demandFormatted": "₹ 62.50 Lakhs",
+    "interestPenalty": 1250000,
+    "totalRiskAmount": 7500000,
+    "issueDate": "20 Oct 2026",
+    "dueDate": "20 Nov 2026",
+    "daysLeft": 23,
+    "status": "Reply Pending",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 0,
+    "allegation": "Allegation of deficit stamp duty on development agreement for Hinjewadi Phase-II citing ready reckoner rate escalation.",
+    "factSheet": [
+      {
+        "point": "Ready reckoner rates at date of execution must apply, not at date of registration, as held by Full Bench Bombay HC.",
+        "source": { "docId": "DOC-027", "docName": "Conveyance Deed Hinjewadi Stamp Verification", "page": 3 }
+      }
+    ],
+    "appealTimeline": [
+      { "stage": "Preliminary Notice", "date": "20 Oct 2026", "status": "Under Legal Scrutiny" }
+    ],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-027"]
+  },
+  {
+    "id": "TAX-055",
+    "noticeNumber": "GST/ASMT-10/2026/4401",
+    "taxType": "GST (Goods & Services Tax)",
+    "section": "Section 61 r.w. Rule 99 CGST Rules",
+    "financialYear": "FY 2020-21",
+    "companyId": "COMP-003",
+    "companyName": "Meridian Estates Pvt Ltd",
+    "issuingAuthority": "Assistant Commissioner of Commercial Taxes, Bengaluru",
+    "demandAmount": 3820000,
+    "demandFormatted": "₹ 38.20 Lakhs",
+    "interestPenalty": 1100000,
+    "totalRiskAmount": 4920000,
+    "issueDate": "05 Oct 2026",
+    "dueDate": "05 Nov 2026",
+    "daysLeft": 8,
+    "status": "Reply Pending",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 0,
+    "allegation": "Scrutiny of return ASMT-10 discrepancy in inward supplies from cancelled suppliers.",
+    "factSheet": [
+      {
+        "point": "Suppliers were active on the GST portal as on date of invoice and tax payment.",
+        "source": { "docId": "DOC-006", "docName": "GST Portal Active Registration Screenshots", "page": 1 }
+      }
+    ],
+    "appealTimeline": [],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-006"]
+  },
+  {
+    "id": "TAX-067",
+    "noticeNumber": "IT/270A/2026/1908",
+    "taxType": "Income Tax",
+    "section": "Section 270A Penalty Proceedings",
+    "financialYear": "FY 2021-22",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "issuingAuthority": "NFAC, Delhi",
+    "demandAmount": 4500000,
+    "demandFormatted": "₹ 45.00 Lakhs",
+    "interestPenalty": 0,
+    "totalRiskAmount": 4500000,
+    "issueDate": "01 Sep 2026",
+    "dueDate": "30 Nov 2026",
+    "daysLeft": 33,
+    "status": "Appeal Filed",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 900000,
+    "allegation": "Penalty for alleged under-reporting of income u/s 270A pursuant to quantum additions.",
+    "factSheet": [],
+    "appealTimeline": [
+      { "stage": "Penalty Notice", "date": "01 Sep 2026", "status": "Stay of Demand Application Filed" }
+    ],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-003"]
+  },
+  {
+    "id": "TAX-073",
+    "noticeNumber": "PMC/PROP-REV/2026/81",
+    "taxType": "Municipal Property Tax",
+    "section": "Section 129 Maharashtra Municipal Corporations Act",
+    "financialYear": "FY 2025-26",
+    "companyId": "COMP-002",
+    "companyName": "Meridian Realty Pvt Ltd",
+    "issuingAuthority": "Pune Municipal Corporation Property Tax Dept",
+    "demandAmount": 1980000,
+    "demandFormatted": "₹ 19.80 Lakhs",
+    "interestPenalty": 396000,
+    "totalRiskAmount": 2376000,
+    "issueDate": "12 Oct 2026",
+    "dueDate": "12 Dec 2026",
+    "daysLeft": 45,
+    "status": "Assessment Review",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 0,
+    "allegation": "Retrospective re-assessment of capital value on Hinjewadi commercial building.",
+    "factSheet": [],
+    "appealTimeline": [],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-027"]
+  },
+  {
+    "id": "TAX-090",
+    "noticeNumber": "GST/SCN/S74/2026/102",
+    "taxType": "GST (Goods & Services Tax)",
+    "section": "Section 74(1) CGST Act (Fraud / Suppression)",
+    "financialYear": "FY 2019-20 & FY 2020-21",
+    "companyId": "COMP-004",
+    "companyName": "Meridian Projects LLP",
+    "issuingAuthority": "Directorate General of GST Intelligence (DGGI), Zonal Unit, Bengaluru",
+    "demandAmount": 31200000,
+    "demandFormatted": "₹ 3.12 Cr",
+    "interestPenalty": 31200000,
+    "totalRiskAmount": 62400000,
+    "issueDate": "18 Aug 2026",
+    "dueDate": "18 Nov 2026",
+    "daysLeft": 21,
+    "status": "High Risk - SCN Reply",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 5000000,
+    "allegation": "Allegation of non-payment of GST on Joint Development Agreement (JDA) development rights transfer prior to completion certificate.",
+    "factSheet": [
+      {
+        "point": "Notification No. 4/2018-CT(R) explicitly shifts tax liability to completion certificate date for commercial residential projects.",
+        "source": { "docId": "DOC-007", "docName": "Devanahalli JDA Agreement & Tax Schedule", "page": 9 }
+      }
+    ],
+    "appealTimeline": [
+      { "stage": "DGGI Summons", "date": "10 Jan 2026", "status": "Statements Recorded" },
+      { "stage": "Section 74 SCN", "date": "18 Aug 2026", "status": "Drafting Response with Senior Counsel" }
+    ],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-007"]
+  },
+  {
+    "id": "TAX-102",
+    "noticeNumber": "TDS/201(1)/2026/5512",
+    "taxType": "TDS Default",
+    "section": "Section 201(1) & 201(1A) Income Tax Act",
+    "financialYear": "FY 2023-24",
+    "companyId": "COMP-001",
+    "companyName": "Meridian Infra Holdings Ltd",
+    "issuingAuthority": "ACIT (TDS), Range-1, Mumbai",
+    "demandAmount": 840000,
+    "demandFormatted": "₹ 8.40 Lakhs",
+    "interestPenalty": 168000,
+    "totalRiskAmount": 1008000,
+    "issueDate": "08 Oct 2026",
+    "dueDate": "08 Nov 2026",
+    "daysLeft": 11,
+    "status": "Challan Correction in Progress",
+    "owner": "Suresh Kulkarni",
+    "preDepositsPaid": 0,
+    "allegation": "Short deduction of TDS on contractor payments under Section 194C due to PAN error in quarterly return 26Q.",
+    "factSheet": [],
+    "appealTimeline": [],
+    "linkedMatters": [],
+    "linkedDocuments": ["DOC-002"]
+  }
+]
