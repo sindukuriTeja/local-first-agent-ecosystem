@@ -628,11 +628,6 @@ function renderClientWorkspace(container) {
   const reports = portalData.reports || []
   const requests = portalData.my_requests || []
   const clientPropBlock = portalData.properties || { available: false }
-  // Only the user's real client/tenant account may submit a workflow
-  // request. Other roles (e.g. an employee previewing the client portal)
-  // get a notice instead of a form that the backend would reject.
-  const canSubmitRequest =
-    (currentUser && (currentUser.portal === 'client' || currentUser.portal === 'tenant'))
 
   container.innerHTML = `
     <!-- Hero: 5-Step Progress Tracker -->
@@ -708,8 +703,7 @@ function renderClientWorkspace(container) {
 
     <!-- Interactive Request & Upload Forms -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
-      <!-- Request form (client/tenant accounts only) -->
-      ${canSubmitRequest ? `
+      <!-- Request form -->
       <div class="glass-card card-pad-lg">
         <h3 style="margin-bottom: 16px;">Submit an Inquiry</h3>
         <form id="client-request-form">
@@ -726,18 +720,7 @@ function renderClientWorkspace(container) {
             ${icons.send}
           </button>
         </form>
-      </div>` : `
-      <div class="glass-card card-pad-lg">
-        <h3 style="margin-bottom: 16px;">Submit an Inquiry</h3>
-        <div style="padding:14px 16px; border-radius:var(--r-12); background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.35);">
-          <div class="caption" style="margin-bottom:4px; color:var(--status-warning-fg, #b45309);">Client or tenant account required</div>
-          <p class="text-small" style="line-height:1.5; margin:0;">
-            You are signed in as <b>${esc(currentUser ? (currentUser.display_name || currentUser.username) : 'this user')}</b>
-            (${esc(currentUser ? currentUser.portal : '—')}), which cannot submit a client request.
-            Sign in with a client or tenant account (e.g. <b>client1 / client123</b>) to use this form.
-          </p>
-        </div>
-      </div>`}
+      </div>
 
       <!-- Upload form -->
       <div class="glass-card card-pad-lg">
@@ -783,8 +766,6 @@ function renderTenantWorkspace(container) {
   const parcels = portalData.parcels || []
   const updates = portalData.updates || []
   const requests = portalData.my_requests || []
-  const canSubmitRequest =
-    (currentUser && (currentUser.portal === 'client' || currentUser.portal === 'tenant'))
 
   container.innerHTML = `
     <!-- Hero: Task Checklist + Property Card -->
@@ -862,7 +843,6 @@ function renderTenantWorkspace(container) {
 
       <div class="glass-card card-pad-lg">
         <h3 style="margin-bottom: 16px;">Inquire With Property Counsel</h3>
-        ${canSubmitRequest ? `
         <form id="tenant-request-form">
           <div class="form-group">
             <label class="form-label" for="t-req-subject">Subject</label>
@@ -876,15 +856,7 @@ function renderTenantWorkspace(container) {
             <span>Submit inquiry</span>
             ${icons.send}
           </button>
-        </form>` : `
-        <div style="padding:14px 16px; border-radius:var(--r-12); background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.35);">
-          <div class="caption" style="margin-bottom:4px; color:var(--status-warning-fg, #b45309);">Client or tenant account required</div>
-          <p class="text-small" style="line-height:1.5; margin:0;">
-            You are signed in as <b>${esc(currentUser ? (currentUser.display_name || currentUser.username) : 'this user')}</b>
-            (${esc(currentUser ? currentUser.portal : '—')}), which cannot submit a client request.
-            Sign in with a client or tenant account (e.g. <b>client1 / client123</b> or <b>tenant1 / tenant123</b>) to use this form.
-          </p>
-        </div>`}
+        </form>
       </div>
     </div>
   `
