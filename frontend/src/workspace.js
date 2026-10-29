@@ -754,7 +754,6 @@ function renderClientWorkspace(container) {
   `
 
   bindClientFormEvents()
-  if (clientPropBlock.available) bindClientPropertyEvents(clientPropBlock)
 }
 
 /* =============================================================
@@ -1133,16 +1132,6 @@ function propStatusBadge(status) {
 function propCard(p, { actions = '' } = {}) {
   const beds = p.bedrooms != null ? `${p.bedrooms} BHK` : '—'
   const baths = p.bathrooms != null ? `${p.bathrooms} Bath` : ''
-  const area = p.area_sqft != null ? `${Number(p.area_sqft).toLocaleString()} sqft` : '—'
-  const perSqft = p.price_per_sqft ? `≈ ₹${Number(p.price_per_sqft).toLocaleString()} / sqft` : ''
-  const meta = [
-    p.facing ? `Facing: ${p.facing}` : null,
-    p.age_years != null ? `${p.age_years} yr old` : null,
-    p.ownership ? p.ownership : null,
-  ].filter(Boolean).join(' · ')
-  const detailsBtn = `<button type="button" class="btn btn-ghost btn-sm prop-details-btn" data-id="${esc(p.id)}">
-          ${icons.fileText || icons.building} View details
-        </button>`
   return `
     <div class="glass-card card-pad-sm" style="display:flex; flex-direction:column; gap:12px;">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
@@ -1160,54 +1149,17 @@ function propCard(p, { actions = '' } = {}) {
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <span class="badge badge-role">${esc(p.type_label)}</span>
         <span class="badge badge-info">${esc(p.property_code)}</span>
-        <span class="badge badge-info">${area}</span>
+        ${p.area_sqft != null ? `<span class="badge badge-info">${Number(p.area_sqft).toLocaleString()} sqft</span>` : ''}
         ${beds !== '—' ? `<span class="badge badge-info">${beds}${baths ? ' · ' + baths : ''}</span>` : ''}
       </div>
       <div style="display:flex; justify-content:space-between; align-items:baseline;">
         <span class="caption">Asking price</span>
         <span style="font-size:20px; font-weight:700; color:var(--role);">${esc(p.price_display)}</span>
       </div>
-      ${perSqft ? `<div class="caption">${perSqft}</div>` : ''}
-      ${meta ? `<div class="caption">${esc(meta)}</div>` : ''}
+      ${p.price_per_sqft ? `<div class="caption">≈ ${Number(p.price_per_sqft).toLocaleString()} / sqft</div>` : ''}
       ${p.description ? `<p class="text-small" style="line-height:1.5;">${esc(p.description)}</p>` : ''}
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">
-        ${detailsBtn}
-        ${actions}
-      </div>
+      ${actions ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">${actions}</div>` : ''}
     </div>
-  `
-}
-
-function propDetailsBody(p) {
-  const row = (label, value) => value == null || value === '' || value === '—' ? '' : `
-    <div style="display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--bd);">
-      <span class="caption">${label}</span>
-      <span style="font-weight:600; text-align:right;">${esc(String(value))}</span>
-    </div>`
-  const beds = p.bedrooms != null ? `${p.bedrooms} BHK` : '—'
-  const baths = p.bathrooms != null ? `${p.bathrooms} bathrooms` : '—'
-  return `
-    ${row('Property code', p.property_code)}
-    ${row('Type', p.type_label)}
-    ${row('Status', p.status)}
-    ${row('City', p.city)}
-    ${row('Locality', p.locality)}
-    ${row('Area', p.area_sqft != null ? `${Number(p.area_sqft).toLocaleString()} sqft` : null)}
-    ${row('Bedrooms', p.bedrooms != null ? p.bedrooms : null)}
-    ${row('Bathrooms', p.bathrooms != null ? p.bathrooms : null)}
-    ${row('Facing', p.facing)}
-    ${row('Age', p.age_years != null ? `${p.age_years} years` : null)}
-    ${row('Ownership', p.ownership)}
-    ${row('Asking price', p.price_display)}
-    ${row('Price / sqft', p.price_per_sqft ? `₹${Number(p.price_per_sqft).toLocaleString()}` : null)}
-    ${p.shared_by ? row('Shared by', p.shared_by) : ''}
-    ${p.shared_at ? row('Shared on', fmtDate(p.shared_at)) : ''}
-    ${p.note ? row('Note', p.note) : ''}
-    ${p.description ? `
-      <div style="margin-top:12px;">
-        <div class="caption" style="margin-bottom:4px;">Description</div>
-        <p class="text-small" style="line-height:1.5;">${esc(p.description)}</p>
-      </div>` : ''}
   `
 }
 
@@ -1323,18 +1275,6 @@ function renderPropertySection(block) {
         </form>
       </div>
     </div>
-
-    <!-- Full details modal -->
-    <div id="prop-details-modal" class="modal-backdrop" role="dialog" aria-modal="true">
-      <div class="modal-card">
-        <h3 id="prop-details-title" style="font-size:18px; font-weight:700; margin-bottom:6px;">Property details</h3>
-        <p class="caption" id="prop-details-sub" style="margin-bottom:14px;"></p>
-        <div id="prop-details-body"></div>
-        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-          <button type="button" class="btn btn-ghost" id="prop-details-close">Close</button>
-        </div>
-      </div>
-    </div>
   `
 }
 
@@ -1381,17 +1321,6 @@ function bindPropertyEvents(block) {
 
   // ---- per-card action buttons (re-bound after each filter) ----
   function bindPropCardButtons() {
-    document.querySelectorAll('.prop-details-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const p = props.find((x) => x.id === btn.getAttribute('data-id'))
-        if (!p) return
-        document.getElementById('prop-details-title').textContent = p.title
-        document.getElementById('prop-details-sub').textContent =
-          `${p.property_code} · ${p.locality}, ${p.city}`
-        document.getElementById('prop-details-body').innerHTML = propDetailsBody(p)
-        openModal('prop-details-modal')
-      })
-    })
     document.querySelectorAll('.prop-share-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id')
@@ -1419,7 +1348,6 @@ function bindPropertyEvents(block) {
   bindPropCardButtons()
 
   // ---- share modal ----
-  document.getElementById('prop-details-close').addEventListener('click', () => closeModal('prop-details-modal'))
   document.getElementById('prop-share-cancel').addEventListener('click', () => closeModal('prop-share-modal'))
   document.getElementById('prop-share-form').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -1561,35 +1489,7 @@ function renderClientPropertySection(block) {
            </div>`
         : renderEmptyState('No properties shared yet', 'When our team sends you a property, it will appear here.')}
     </div>
-
-    <!-- Full details modal (client) -->
-    <div id="prop-details-modal" class="modal-backdrop" role="dialog" aria-modal="true">
-      <div class="modal-card">
-        <h3 id="prop-details-title" style="font-size:18px; font-weight:700; margin-bottom:6px;">Property details</h3>
-        <p class="caption" id="prop-details-sub" style="margin-bottom:14px;"></p>
-        <div id="prop-details-body"></div>
-        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-          <button type="button" class="btn btn-ghost" id="prop-details-close">Close</button>
-        </div>
-      </div>
-    </div>
   `
-}
-
-function bindClientPropertyEvents(block) {
-  const shared = (block && block.shared_with_me) || []
-  document.querySelectorAll('#sec-client-properties .prop-details-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const p = shared.find((x) => x.id === btn.getAttribute('data-id'))
-      if (!p) return
-      document.getElementById('prop-details-title').textContent = p.title
-      document.getElementById('prop-details-sub').textContent =
-        `${p.property_code} · ${p.locality}, ${p.city}`
-      document.getElementById('prop-details-body').innerHTML = propDetailsBody(p)
-      openModal('prop-details-modal')
-    })
-  })
-  document.getElementById('prop-details-close')?.addEventListener('click', () => closeModal('prop-details-modal'))
 }
 
 /* =============================================================
