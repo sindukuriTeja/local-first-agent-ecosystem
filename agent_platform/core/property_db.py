@@ -396,8 +396,7 @@ class PropertyStore:
     def shares_for_portal(self, portal: str,
                           username: Optional[str] = None) -> List[Dict[str, Any]]:
         """Properties shared to a portal (optionally a specific user)."""
-        sql = ("SELECT s.*, p.property_code, p.title, p.city, p.locality, "
-               "p.type, p.area_sqft, p.price_inr "
+        sql = ("SELECT s.*, p.* "
                "FROM property_shares s JOIN properties p ON p.id=s.property_id "
                "WHERE s.to_portal=?")
         args: List[Any] = [portal]
