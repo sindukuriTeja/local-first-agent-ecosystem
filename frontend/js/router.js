@@ -83,31 +83,31 @@ export class Router {
 
     // Specific role rules from Section 4 & Role mappings
     if (role === 'External counsel') {
-      return path.startsWith('/matters') || path.startsWith('/documents') || path === '/login' || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/matters') || path.startsWith('/documents') || path === '/login' || path === '/profile';
     }
     if (role === 'Manager / Board member' || role === 'Management' || role === 'management') {
-      return !path.startsWith('/security') && !path.startsWith('/admin') && !path.startsWith('/research') && !path.startsWith('/drafting');
+      return path === '/ask' || (!path.startsWith('/security') && !path.startsWith('/admin') && !path.startsWith('/research') && !path.startsWith('/drafting'));
     }
     if (role === 'Lawyer' || role === 'Advocate' || role === 'advocate') {
-      return path === '/home' || path.startsWith('/matters') || path.startsWith('/research') || path.startsWith('/drafting') || path.startsWith('/documents') || path.startsWith('/approvals') || path.startsWith('/calendar') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/matters') || path.startsWith('/research') || path.startsWith('/drafting') || path.startsWith('/documents') || path.startsWith('/approvals') || path.startsWith('/calendar') || path === '/profile';
     }
     if (role === 'Tax team member') {
-      return path === '/home' || path.startsWith('/tax') || path.startsWith('/drafting') || path.startsWith('/documents') || path.startsWith('/calendar') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/tax') || path.startsWith('/drafting') || path.startsWith('/documents') || path.startsWith('/calendar') || path === '/profile';
     }
     if (role === 'Company secretary') {
-      return path === '/home' || path.startsWith('/companies') || path.startsWith('/documents') || path.startsWith('/calendar') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/companies') || path.startsWith('/documents') || path.startsWith('/calendar') || path === '/profile';
     }
     if (role === 'Finance team member' || role === 'Auditor' || role === 'auditor') {
-      return path === '/home' || path.startsWith('/loans') || path.startsWith('/land') || path.startsWith('/documents') || path.startsWith('/calendar') || path.startsWith('/reports') || path.startsWith('/security') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/loans') || path.startsWith('/land') || path.startsWith('/documents') || path.startsWith('/calendar') || path.startsWith('/reports') || path.startsWith('/security') || path === '/profile';
     }
     if (role === 'Staff member' || role === 'Internal Employee' || role === 'employee') {
-      return path === '/home' || path.startsWith('/documents') || path.startsWith('/calendar') || path.startsWith('/notifications') || path.startsWith('/matters') || path.startsWith('/tax') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/documents') || path.startsWith('/calendar') || path.startsWith('/notifications') || path.startsWith('/matters') || path.startsWith('/tax') || path === '/profile';
     }
     if (role === 'Client' || role === 'client') {
-      return path === '/home' || path.startsWith('/documents') || path.startsWith('/matters') || path.startsWith('/approvals') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/documents') || path.startsWith('/matters') || path.startsWith('/approvals') || path === '/profile';
     }
     if (role === 'Tenant or Buyer' || role === 'tenant') {
-      return path === '/home' || path.startsWith('/land') || path.startsWith('/documents') || path === '/profile';
+      return path === '/home' || path === '/ask' || path.startsWith('/land') || path.startsWith('/documents') || path === '/profile';
     }
 
     return true;

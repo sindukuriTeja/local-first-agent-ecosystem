@@ -101,7 +101,7 @@ class BaseAgent:
         system: str,
         user: str,
         temperature: Optional[float] = None,
-        max_tokens: int = 2048,
+        max_tokens: int = 512,
         json_mode: bool = False,
     ) -> str:
         model = self.model_for(temperature)

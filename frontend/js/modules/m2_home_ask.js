@@ -262,7 +262,7 @@ export async function renderAskView(container) {
     </div>
   `;
 
-  window.executeAskQuery = () => {
+  window.executeAskQuery = async () => {
     const input = document.getElementById('ask-input-box');
     const q = input?.value.trim();
     if (!q) return;
@@ -270,17 +270,33 @@ export async function renderAskView(container) {
     input.value = '';
     const log = document.getElementById('ask-chat-log');
 
-    // Append User Message
+    // Append user message bubble
     const userMsg = document.createElement('div');
     userMsg.style.cssText = 'align-self: flex-end; background: var(--primary); color: #fff; padding: 10px 16px; border-radius: 12px 12px 2px 12px; max-width: 80%; font-size: 14px;';
     userMsg.textContent = q;
     log.appendChild(userMsg);
     log.scrollTop = log.scrollHeight;
 
-    // Simulated streaming response
-    setTimeout(() => {
-      renderAIAnswer(log, q);
-    }, 450);
+    // Show typing indicator
+    const typingEl = document.createElement('div');
+    typingEl.id = 'typing-indicator';
+    typingEl.style.cssText = 'align-self: flex-start; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 12px 18px; border-radius: 12px 12px 12px 2px; font-size: 13px; color: var(--text-muted); display:flex; align-items:center; gap:8px;';
+    typingEl.innerHTML = '<span style="animation:pulse 1.2s infinite;">⏳</span> Routing through agents — thinking…';
+    log.appendChild(typingEl);
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const result = await api.askAI(q);
+      typingEl.remove();
+      await renderAIAnswer(log, q, result);
+    } catch (err) {
+      typingEl.remove();
+      const errEl = document.createElement('div');
+      errEl.style.cssText = 'align-self: flex-start; background: var(--bg-surface); border: 1px solid var(--color-danger); padding: 14px 18px; border-radius: 12px; font-size: 13px; color: var(--color-danger); max-width:90%;';
+      errEl.innerHTML = `⚠️ <strong>Agent Error:</strong> ${err.message || 'Could not reach the backend. Make sure the server is running.'}`;
+      log.appendChild(errEl);
+      log.scrollTop = log.scrollHeight;
+    }
   };
 
   if (initialQuery) {
@@ -288,14 +304,15 @@ export async function renderAskView(container) {
   }
 
   window.loadSavedAsk = (idx) => {
-    const log = document.getElementById('ask-chat-log');
-    if (!log) return;
-    if (idx === 1) {
-      renderAIAnswer(log, 'Which land parcels are currently mortgaged?');
-    } else if (idx === 2) {
-      renderAIAnswer(log, 'Summarize Northern National Bank DRT claim');
-    } else {
-      renderAIAnswer(log, 'Explain Coastal Finance penal interest calculation');
+    const input = document.getElementById('ask-input-box');
+    const queries = [
+      'Which land parcels are currently mortgaged?',
+      'Summarize Northern National Bank DRT claim',
+      'Explain Coastal Finance penal interest calculation'
+    ];
+    if (input && queries[idx - 1]) {
+      input.value = queries[idx - 1];
+      window.executeAskQuery();
     }
   };
 
@@ -304,97 +321,48 @@ export async function renderAskView(container) {
   };
 }
 
-function renderAIAnswer(log, query) {
-  const qLower = query.toLowerCase();
+async function renderAIAnswer(log, query, result) {
   const answerContainer = document.createElement('div');
   answerContainer.style.cssText = 'align-self: flex-start; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 18px; border-radius: 12px 12px 12px 2px; max-width: 90%; box-shadow: var(--shadow-sm);';
 
-  let answerText = '';
-  let sources = [];
-  let followUps = [];
+  const answer = result?.answer || '';
+  const status = result?.status || 'ok';
+  const sources = result?.sources || [];
+  const latency = result?.latency_ms ? `${(result.latency_ms / 1000).toFixed(1)}s` : '';
 
-  if (qLower.includes('mortgage') || qLower.includes('parcels')) {
-    answerText = `According to the group land registry and title search reports, **4 parcels** are currently subject to active mortgages:\n\n1. **Survey No. 112/3 (12.5 acres, Hinjewadi, Pune)**: Held as primary security under Facility LN-001 by Northern National Bank with registered mortgage created on 14 Oct 2019.\n2. **Survey No. 77/1 (30.4 acres, Devanahalli, Bengaluru)**: Mortgaged to Apex Housing Finance under Facility LN-003.\n3. **Survey No. 101/4 (18.0 acres, Chakan, Pune)**: Collateral mortgage to Northern National Bank.\n4. **Survey No. 19/3 (11.0 acres, JNPT Uran)**: First charge in favor of Bharat Commercial Bank.\n\n*Note: Parcel P-009 (14.2 acres, Shamshabad) was successfully discharged following OTS settlement on 20 Jul 2026.*`;
-    sources = [
-      { docId: 'DOC-019', docName: 'Registered Mortgage Deed Hinjewadi', page: 2 },
-      { docId: 'DOC-017', docName: 'Apex Housing Sanction Letter', page: 3 },
-      { docId: 'DOC-022', docName: 'Pragati Bank No Dues Certificate', page: 1 }
-    ];
-    followUps = [
-      'What is the estimated market value of the Hinjewadi parcel?',
-      'Show settlement terms for Apex Housing Finance',
-      'View Title Chain for Parcel P-001'
-    ];
-  } else if (qLower.includes('drt') || qLower.includes('northern')) {
-    answerText = `In **Matter M-2025-014 (Debts Recovery Tribunal-I, Mumbai)**, Northern National Bank has filed Original Application OA No. 142/2025 claiming **₹ 112.40 Cr** against Meridian Realty Pvt Ltd.\n\n**Key Legal Defenses Recorded:**\n• Bank improperly curtailed the construction moratorium from 24 months to 18 months.\n• Account was flagged as NPA on 31 Dec 2023 notwithstanding receipt of ₹ 4.50 Cr interest payment on 28 Dec 2023.\n• Provisional attachment of Panvel Land (Parcel P-004) was issued on 14 Feb 2026.\n\nNext cross-examination hearing is scheduled for **12 Nov 2026**.`;
-    sources = [
-      { docId: 'DOC-012', docName: 'NNB Sanction Letter Ref 4410', page: 2 },
-      { docId: 'DOC-013', docName: 'NNB Demand Notice U/S 13(2)', page: 3 },
-      { docId: 'DOC-038', docName: 'DRT Attachment Warrant', page: 1 }
-    ];
-    followUps = [
-      'Draft Written Statement counter-claim for DRT hearing',
-      'Check limitation period for challenging SARFAESI Section 14 notice',
-      'View conflicts between bank account statements and OA claim'
-    ];
-  } else if (qLower.includes('coastal') || qLower.includes('reconcil')) {
-    answerText = `Under Facility LN-002, **Coastal Finance Ltd** demands an outstanding balance of **₹ 42.10 Cr**, whereas Meridian Estates internal audited books record **₹ 38.60 Cr** as of 30 Sep 2026.\n\n**Discrepancy of ₹ 3.50 Cr:**\nThis difference represents compounding penal interest charged contrary to RBI Circular DOR.MCS.REC.28/01.01.001/2023-24 and the Supreme Court Constitution Bench ruling in *Central Bank of India v. Ravindra* (2002).`;
-    sources = [
-      { docId: 'DOC-015', docName: 'Coastal Finance Loan Agreement', page: 4 },
-      { docId: 'DOC-016', docName: 'CFL Ledger Statement 30 Sep 2026', page: 1 }
-    ];
-    followUps = [
-      'Open Exposure Ledger reconciliation breakdown',
-      'Cite Supreme Court precedent in Ravindra case',
-      'Generate OTS proposal letter with penal interest waiver'
-    ];
-  } else {
-    // NotFoundState fallback as required by rule 1 ("Never show guessed data")
+  // No answer fallback
+  if (!answer || answer.trim() === '' || answer.includes('No specialist agent produced an answer')) {
     answerContainer.innerHTML = renderNotFoundState(
-      'No Authoritative Document Record Found',
-      `The knowledge base does not contain verified citations for "${query}". The system strictly refuses to hallucinate facts without primary document proof.`
+      'No Verified Record Found',
+      `The knowledge base does not contain verified citations for "${query}". Try asking about parcels, loans, matters, tax notices, or company records.`
     );
     log.appendChild(answerContainer);
     log.scrollTop = log.scrollHeight;
     return;
   }
 
+  const needsApproval = status === 'needs_approval';
+  const sourcesHtml = sources.length > 0
+    ? `<div style="background:var(--bg-subtle); padding:10px 14px; border-radius:8px; border:1px solid var(--border-subtle); margin-bottom:14px;">
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Sources (${sources.length})</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${sources.map(s => renderSourceChip(s, s, 1)).join('')}
+        </div>
+       </div>`
+    : '';
+
   answerContainer.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:16px;">✨</span>
-        <strong style="font-size:13px; color:var(--text-main);">Verified Answer</strong>
-        ${renderAIGeneratedTag('Grounding Confidence: 98%')}
+        <span style="font-size:16px;">${needsApproval ? '⏳' : '✨'}</span>
+        <strong style="font-size:13px; color:var(--text-main);">${needsApproval ? 'Pending Approval' : 'Agent Response'}</strong>
+        ${renderAIGeneratedTag(latency ? `via llama3 · ${latency}` : 'Local LLM')}
       </div>
-      <div style="display:flex; gap:6px;">
-        <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('${answerText.replace(/'/g, "\\'")}'); window.MeridianApp.showToast('Copied to clipboard', 'info');">Copy</button>
-        <button class="btn btn-secondary btn-sm" onclick="window.MeridianApp.showToast('Saved to Matter M-2025-014 research notes', 'success');">Save to Matter</button>
-      </div>
+      <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling?.textContent || ''); window.MeridianApp?.showToast('Copied', 'info');">Copy</button>
     </div>
-
-    <div style="font-size:13px; line-height:1.7; color:var(--text-main); white-space:pre-line; margin-bottom:14px;">
-      ${answerText}
-    </div>
-
-    <!-- Grounding Sources Panel -->
-    <div style="background:var(--bg-subtle); padding:10px 14px; border-radius:8px; border:1px solid var(--border-subtle); margin-bottom:14px;">
-      <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Authoritative Sources (${sources.length})</div>
-      <div style="display:flex; flex-wrap:wrap; gap:6px;">
-        ${sources.map(s => renderSourceChip(s.docId, s.docName, s.page)).join('')}
-      </div>
-    </div>
-
-    <!-- Suggested Follow-ups -->
-    <div style="border-top:1px solid var(--border-subtle); padding-top:10px;">
-      <div style="font-size:11px; font-weight:600; color:var(--text-tertiary); margin-bottom:6px;">SUGGESTED FOLLOW-UP QUESTIONS:</div>
-      <div style="display:flex; flex-direction:column; gap:4px;">
-        ${followUps.map(f => `
-          <button class="filter-chip" style="text-align:left; border-radius:6px; font-size:12px;" onclick="window.fillAsk('${f}'); window.executeAskQuery();">
-            → ${f}
-          </button>
-        `).join('')}
-      </div>
-    </div>
+    <div style="font-size:13px; line-height:1.7; color:var(--text-main); white-space:pre-wrap; margin-bottom:14px;">${answer}</div>
+    ${sourcesHtml}
+    ${needsApproval ? `<div style="background:#FEF3C7; border:1px solid #FCD34D; padding:10px 14px; border-radius:8px; font-size:12px; color:#92400E;">⏳ This response requires human approval before it can be used.</div>` : ''}
   `;
 
   log.appendChild(answerContainer);

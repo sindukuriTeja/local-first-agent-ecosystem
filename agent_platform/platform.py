@@ -264,10 +264,71 @@ def _workflow_ai_runner(platform: "Platform", user: str, prompt: str,
     Orchestrator with the workflow's context (subject/matter) injected so the
     agents retrieve the right records. Returns a plain dict for the engine."""
     enriched = prompt
+
+    # --- Inject internal property database context ---
+    # If the prompt mentions property-related keywords, pull real data
+    # from the PropertyStore and prepend it so the LLM answers from
+    # actual inventory instead of hallucinating.
+    prop_keywords = [
+        "flat", "apartment", "plot", "land", "property", "house", "villa",
+        "buy", "sell", "rent", "price", "hyderabad", "bangalore", "chennai",
+        "location", "area", "sqft", "bhk", "available", "listing"
+    ]
+    prompt_lower = (prompt + " " + state.get("workflow_subject", "")).lower()
+    is_property_query = any(kw in prompt_lower for kw in prop_keywords)
+
+    if is_property_query and platform.properties is not None:
+        try:
+            # Extract city hint from prompt
+            city_map = {
+                "hyderabad": "Hyderabad", "bangalore": "Bangalore",
+                "bengaluru": "Bangalore", "chennai": "Chennai"
+            }
+            city_hint = next((city_map[k] for k in city_map if k in prompt_lower), None)
+
+            # Extract type hint
+            type_map = {
+                "flat": "flat", "apartment": "apartment", "plot": "plot",
+                "land": "plot", "villa": "villa", "house": "villa"
+            }
+            type_hint = next((type_map[k] for k in type_map if k in prompt_lower), None)
+
+            # Get stats
+            stats = platform.properties.stats()
+
+            # Get relevant listings (up to 15)
+            props = platform.properties.list_properties(
+                city=city_hint, ptype=type_hint, limit=15
+            )
+
+            # Build a compact property summary for the LLM
+            lines = [
+                f"=== INTERNAL PROPERTY DATABASE ===",
+                f"Total properties: {stats['total']}",
+                f"By city: {stats['by_city']}",
+                f"By type: {stats['by_type']}",
+                f"By status: {stats['by_status']}",
+                "",
+                f"Relevant listings ({len(props)} shown):",
+            ]
+            for p in props:
+                price_str = f"₹{p['price']:,}" if p.get('price') else "Price on request"
+                lines.append(
+                    f"- [{p['property_code']}] {p['title']} | {p['type']} | "
+                    f"{p['locality']}, {p['city']} | {p.get('area_sqft', 'N/A')} sqft | "
+                    f"{price_str} | Status: {p['status']}"
+                )
+            lines.append("=== END PROPERTY DATABASE ===\n")
+
+            property_context = "\n".join(lines)
+            enriched = property_context + "\n" + prompt
+        except Exception:
+            pass  # if DB fails, fall back to plain prompt
+
     if state.get("workflow_subject"):
         enriched = (
             f"[Workflow context: subject='{state['workflow_subject']}', "
-            f"matter={state.get('matter') or 'n/a'}]\n{prompt}"
+            f"matter={state.get('matter') or 'n/a'}]\n{enriched}"
         )
     result = platform.handle_request(user, enriched,
                                      state.get("tenant", "default"),

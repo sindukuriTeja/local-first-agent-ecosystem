@@ -315,5 +315,28 @@ export const api = {
     await ensureReady();
     await delay();
     return clone(state.reports);
+  },
+
+  // Real AI backend call — routes through the 16-agent orchestrator
+  async askAI(query) {
+    const token = localStorage.getItem('nushift_token') || localStorage.getItem('lfae_token');
+    const username = (() => {
+      try {
+        const raw = localStorage.getItem('nushift_user') || localStorage.getItem('lfae_user');
+        if (raw) { const u = JSON.parse(raw); return u.username || u.name || 'admin'; }
+      } catch {}
+      return 'admin';
+    })();
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const resp = await fetch('/ask', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ user: username, request: query, tenant: 'default', state: {} })
+    });
+    if (!resp.ok) throw new Error(`Backend error ${resp.status}`);
+    return await resp.json();
   }
 };
