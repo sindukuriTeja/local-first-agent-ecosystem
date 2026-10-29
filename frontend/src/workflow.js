@@ -110,7 +110,6 @@ export function renderWorkflowPanel(portal, wfData) {
         </span>
       </div>
       ${body || renderEmpty('No workflows yet', 'Submit a request to start a live collaboration.')}
-      <div id="wf-modal-root"></div>
     </div>
   `
 }
@@ -423,27 +422,10 @@ export function bindWorkflowEvents(portal) {
     }
   })
 
-  // Form submits (assign / ai / input / note / complete / answer)
-  panel.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const form = e.target
-    const kind = form.dataset.wfKind
-    if (!kind) return
-    const val = (id) => (form.querySelector(id) ? form.querySelector(id).value.trim() : '')
-    try {
-      if (kind === 'assign') await act('approve', { workflow_id: form.dataset.wf, employee_username: val('#wf-assign-user'), note: val('#wf-assign-note') })
-      if (kind === 'reject') await act('reject', { workflow_id: form.dataset.wf, note: val('#wf-reject-note') })
-      if (kind === 'ai') await act('ai', { workflow_id: form.dataset.wf, prompt: val('#wf-ai-prompt') })
-      if (kind === 'input') await act('input', { workflow_id: form.dataset.wf, to_user: val('#wf-input-user'), to_portal: val('#wf-input-portal'), question: val('#wf-input-q') })
-      if (kind === 'note') await act('activity', { workflow_id: form.dataset.wf, kind: 'note', text: val('#wf-note-text') })
-      if (kind === 'complete') await act('complete', { workflow_id: form.dataset.wf, final_response: val('#wf-complete-text') })
-      if (kind === 'final-approve') await act('final-approve', { workflow_id: form.dataset.wf, final_response: val('#wf-final-response'), note: val('#wf-final-note') })
-      if (kind === 'send-back') await act('send-back', { workflow_id: form.dataset.wf, note: val('#wf-sendback-note') })
-      closeModal()
-    } catch (err) {
-      showToast({ title: 'Workflow error', message: err.message, type: 'error' })
-    }
-  })
+  // NOTE: modal form submits are delegated on the body-level #wf-modal-root
+  // (see getModalRoot / handleModalSubmit), because the modal is portaled
+  // out of the panel so its position:fixed overlay is not trapped by the
+  // panel's backdrop-filter.
 }
 
 async function act(endpoint, body) {
@@ -463,14 +445,51 @@ async function act(endpoint, body) {
   await refreshWorkflowPanel()
 }
 
-// ---- lightweight modal (rendered into #wf-modal-root) -------------------
+// ---- lightweight modal (rendered into a body-level #wf-modal-root) -------
+// The modal root is attached to <body>, NOT inside the workflow panel. The
+// panel has `backdrop-filter: blur(...)` (via .glass-card), which makes it a
+// containing block for `position:fixed` descendants — so a fixed overlay
+// rendered inside it is trapped to the panel's small box and its buttons
+// become unreachable. Portaling to <body> keeps the overlay full-viewport.
+function getModalRoot() {
+  let root = document.getElementById('wf-modal-root')
+  if (!root) {
+    root = document.createElement('div')
+    root.id = 'wf-modal-root'
+    document.body.appendChild(root)
+    // Modal forms live here (in <body>, outside the panel), so the submit
+    // handler is delegated on the root — not on the panel.
+    root.addEventListener('submit', handleModalSubmit)
+  }
+  return root
+}
+
+async function handleModalSubmit(e) {
+  e.preventDefault()
+  const form = e.target
+  const kind = form.dataset.wfKind
+  if (!kind) return
+  const val = (id) => (form.querySelector(id) ? form.querySelector(id).value.trim() : '')
+  try {
+    if (kind === 'assign') await act('approve', { workflow_id: form.dataset.wf, employee_username: val('#wf-assign-user'), note: val('#wf-assign-note') })
+    if (kind === 'reject') await act('reject', { workflow_id: form.dataset.wf, note: val('#wf-reject-note') })
+    if (kind === 'ai') await act('ai', { workflow_id: form.dataset.wf, prompt: val('#wf-ai-prompt') })
+    if (kind === 'input') await act('input', { workflow_id: form.dataset.wf, to_user: val('#wf-input-user'), to_portal: val('#wf-input-portal'), question: val('#wf-input-q') })
+    if (kind === 'note') await act('activity', { workflow_id: form.dataset.wf, kind: 'note', text: val('#wf-note-text') })
+    if (kind === 'complete') await act('complete', { workflow_id: form.dataset.wf, final_response: val('#wf-complete-text') })
+    if (kind === 'final-approve') await act('final-approve', { workflow_id: form.dataset.wf, final_response: val('#wf-final-response'), note: val('#wf-final-note') })
+    if (kind === 'send-back') await act('send-back', { workflow_id: form.dataset.wf, note: val('#wf-sendback-note') })
+    closeModal()
+  } catch (err) {
+    showToast({ title: 'Workflow error', message: err.message, type: 'error' })
+  }
+}
 function closeModal() {
   const root = document.getElementById('wf-modal-root')
   if (root) root.innerHTML = ''
 }
 function openModal(title, bodyHtml, formId) {
-  const root = document.getElementById('wf-modal-root')
-  if (!root) return
+  const root = getModalRoot()
   root.innerHTML = `
     <div class="wf-modal-overlay" id="wf-modal-overlay">
       <div class="wf-modal">
