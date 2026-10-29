@@ -113,6 +113,25 @@ export const api = {
   wfFinalApprove: (body) => request('/api/workflow/final-approve', { method: 'POST', body }),
   wfSendBack: (body) => request('/api/workflow/send-back', { method: 'POST', body }),
 
+  // real-estate property database
+  propList: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== '' && v != null)
+    ).toString()
+    return request(`/api/properties${qs ? `?${qs}` : ''}`)
+  },
+  propGet: (id) => request(`/api/properties/${id}`),
+  propShare: (id, body) =>
+    request(`/api/properties/${id}/share`, { method: 'POST', body }),
+  propPriceRequest: (id, body) =>
+    request(`/api/properties/${id}/price-request`, { method: 'POST', body }),
+  propPriceRequests: () => request('/api/properties/price-requests'),
+  propPriceDecide: (requestId, body) =>
+    request(`/api/properties/price-requests/${requestId}/decide`, {
+      method: 'POST',
+      body,
+    }),
+
   // admin
   adminUsers: () => request('/api/admin/users'),
   adminCreateUser: (username, password, role, display_name = '') =>

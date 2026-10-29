@@ -170,6 +170,7 @@ class PortalService:
             "drafts": drafts,
             "documents": [_doc_view(d, include_content=False) for d in docs[:60]],
             "ai_tasks": self._ai_task_prompts(user),
+            "properties": self._property_block(user),
         }
 
     # ---- management --------------------------------------------------
@@ -209,6 +210,7 @@ class PortalService:
                  "requested_by": a.requested_by, "requested_at": a.requested_at}
                 for a in pending
             ],
+            "property_price_requests": self._pending_price_requests(),
             "recent_audit": p.audit_query(limit=12),
             "learning": p.learning_dashboard() if p.learning_scheduler else None,
         }
@@ -239,6 +241,7 @@ class PortalService:
             "reports": reports,
             "my_requests": requests,
             "documents": [_doc_view(d, include_content=False) for d in docs[:60]],
+            "properties": self._client_property_block(user),
         }
 
     # ---- tenant ------------------------------------------------------
@@ -316,6 +319,83 @@ class PortalService:
             "workflows": items,
             "pending_inputs": pending_inputs,
         }
+
+    # ------------------------------------------------------------------
+    # real-estate property database (local-first)
+    # ------------------------------------------------------------------
+    def _props(self):
+        return self.p.properties
+
+    def _property_block(self, user: PortalUser) -> Dict[str, Any]:
+        """Employee view: live inventory + stats + their own activity."""
+        store = self._props()
+        if store is None:
+            return {"available": False}
+        return {
+            "available": True,
+            "stats": store.stats(),
+            "properties": store.list_properties(),
+            "my_shares": store.shares_by_user(user.username),
+            "my_price_requests": store.price_requests_by_user(user.username),
+        }
+
+    def _client_property_block(self, user: PortalUser) -> Dict[str, Any]:
+        """Client view: only the properties an employee sent to them."""
+        store = self._props()
+        if store is None:
+            return {"available": False}
+        return {
+            "available": True,
+            "shared_with_me": store.shares_for_portal("client", user.username),
+        }
+
+    def _pending_price_requests(self) -> List[Dict[str, Any]]:
+        store = self._props()
+        if store is None:
+            return []
+        return store.pending_price_requests()
+
+    def share_property(self, user: PortalUser, property_id: str,
+                       to_portal: str, to_username: Optional[str] = None,
+                       note: str = "") -> Dict[str, Any]:
+        store = self._props()
+        if store is None:
+            raise ValueError("property store not available")
+        res = store.share_property(property_id, to_portal, to_username,
+                                   note, shared_by=user.username)
+        if res is None:
+            raise KeyError(f"property {property_id} not found")
+        return res
+
+    def request_price_change(self, user: PortalUser, property_id: str,
+                             requested_price: int,
+                             reason: str = "") -> Dict[str, Any]:
+        store = self._props()
+        if store is None:
+            raise ValueError("property store not available")
+        res = store.request_price_change(property_id, requested_price, reason,
+                                         requested_by=user.username)
+        if res is None:
+            raise KeyError(f"property {property_id} not found")
+        return res
+
+    def decide_price_change(self, user: PortalUser, request_id: str,
+                            decision: str, note: str = "") -> Dict[str, Any]:
+        if not user.can_approve:
+            raise PermissionError(f"Role '{user.role}' is not an approver.")
+        store = self._props()
+        if store is None:
+            raise ValueError("property store not available")
+        try:
+            res = store.decide_price_change(request_id, decision,
+                                            user.username, note)
+        except ValueError as e:
+            if "already" in str(e):
+                raise KeyError(str(e))
+            raise
+        if res is None:
+            raise KeyError(f"price request {request_id} not found")
+        return res
 
     # ------------------------------------------------------------------
     # AI-assisted task prompts (per portal)

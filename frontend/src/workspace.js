@@ -303,10 +303,14 @@ function renderEmployeeWorkspace(container) {
   const statutes = legalWork.filter((d) => d.doc_type === 'statute')
   const judgments = legalWork.filter((d) => d.doc_type !== 'statute')
   const allDocs = portalData.documents || []
+  const propertyBlock = portalData.properties || { available: false }
 
   container.innerHTML = `
     <!-- Hero: Gradient-border AI Task Box -->
     ${renderAiTaskBox(portalData.ai_tasks || [])}
+
+    <!-- Property Database (real-estate) -->
+    ${propertyBlock.available ? renderPropertySection(propertyBlock) : ''}
 
     <!-- 4 Stat Cards with Tickers -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
@@ -383,6 +387,7 @@ function renderEmployeeWorkspace(container) {
 
   bindAiTaskEvents()
   bindLegalTabs(statutes, judgments)
+  if (propertyBlock.available) bindPropertyEvents(propertyBlock)
   initTickersInContainer(container)
 }
 
@@ -397,6 +402,7 @@ function renderManagementWorkspace(container) {
   const approvals = portalData.approvals || []
   const workload = portalData.workload || []
   const compliance = portalData.compliance_snapshot || []
+  const priceRequests = portalData.property_price_requests || []
 
   container.innerHTML = `
     <!-- Hero: Firm-wide KPI Strip + Inline SVG Bar Chart -->
@@ -484,6 +490,9 @@ function renderManagementWorkspace(container) {
       }
     </div>
 
+    <!-- Property price-change approvals (employee requests -> exec sign-off) -->
+    ${renderPropertyPriceQueue(priceRequests)}
+
     <!-- Grid 2: Workload by matter and Compliance Snapshot -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
       <div class="glass-card card-pad-lg" id="sec-cases">
@@ -530,6 +539,7 @@ function renderManagementWorkspace(container) {
   `
 
   bindApprovalEvents()
+  bindPropertyPriceQueue()
   initTickersInContainer(container)
 }
 
@@ -617,6 +627,7 @@ function renderClientWorkspace(container) {
   const cases = portalData.cases || []
   const reports = portalData.reports || []
   const requests = portalData.my_requests || []
+  const clientPropBlock = portalData.properties || { available: false }
 
   container.innerHTML = `
     <!-- Hero: 5-Step Progress Tracker -->
@@ -686,6 +697,9 @@ function renderClientWorkspace(container) {
         </button>
       </div>
     </div>
+
+    <!-- Properties shared with me (sent by an employee) -->
+    ${clientPropBlock.available ? renderClientPropertySection(clientPropBlock) : ''}
 
     <!-- Interactive Request & Upload Forms -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
@@ -1098,6 +1112,384 @@ function renderAdminWorkspace(container) {
 
   bindAdminEvents()
   initTickersInContainer(container)
+}
+
+/* =============================================================
+   Property Database (real-estate) — render + bind helpers
+   ============================================================= */
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]))
+}
+
+function propStatusBadge(status) {
+  const cls = { available: 'badge-success', reserved: 'badge-warning', sold: 'badge-error' }[status] || 'badge-info'
+  const label = (status || 'unknown').charAt(0).toUpperCase() + (status || '').slice(1)
+  return `<span class="badge ${cls}"><span class="dot"></span>${label}</span>`
+}
+
+function propCard(p, { actions = '' } = {}) {
+  const beds = p.bedrooms != null ? `${p.bedrooms} BHK` : '—'
+  const baths = p.bathrooms != null ? `${p.bathrooms} Bath` : ''
+  return `
+    <div class="glass-card card-pad-sm" style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="icon-tile icon-tile-44" style="--role: var(--role);">${icons.building}</span>
+          <div>
+            <div style="font-weight:600; font-size:15px;">${esc(p.title)}</div>
+            <div class="caption" style="display:flex; align-items:center; gap:4px;">
+              ${icons.mapPin} ${esc(p.locality)}, ${esc(p.city)}
+            </div>
+          </div>
+        </div>
+        ${propStatusBadge(p.status)}
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="badge badge-role">${esc(p.type_label)}</span>
+        <span class="badge badge-info">${esc(p.property_code)}</span>
+        ${p.area_sqft != null ? `<span class="badge badge-info">${Number(p.area_sqft).toLocaleString()} sqft</span>` : ''}
+        ${beds !== '—' ? `<span class="badge badge-info">${beds}${baths ? ' · ' + baths : ''}</span>` : ''}
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <span class="caption">Asking price</span>
+        <span style="font-size:20px; font-weight:700; color:var(--role);">${esc(p.price_display)}</span>
+      </div>
+      ${p.price_per_sqft ? `<div class="caption">≈ ${Number(p.price_per_sqft).toLocaleString()} / sqft</div>` : ''}
+      ${p.description ? `<p class="text-small" style="line-height:1.5;">${esc(p.description)}</p>` : ''}
+      ${actions ? `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;">${actions}</div>` : ''}
+    </div>
+  `
+}
+
+function renderPropertySection(block) {
+  const props = (block && block.properties) || []
+  const stats = (block && block.stats) || {}
+  const cities = stats.cities || []
+  const types = stats.types || []
+  const statuses = stats.statuses || []
+  return `
+    <div class="glass-card card-pad-lg" id="sec-properties">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="icon-tile icon-tile-44" style="--role: var(--role);">${icons.building}</span>
+          <div>
+            <h3 style="margin-bottom:2px;">Property Database</h3>
+            <p class="caption">Live inventory · land, plots, flats &amp; apartments across ${cities.join(', ')}. Query the store, then share or re-price.</p>
+          </div>
+        </div>
+        <span class="badge badge-role"><span class="dot"></span>${stats.total || props.length} listings</span>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:18px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label" for="prop-filter-city">City</label>
+          <select id="prop-filter-city" class="form-input">
+            <option value="">All cities</option>
+            ${cities.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label" for="prop-filter-type">Type</label>
+          <select id="prop-filter-type" class="form-input">
+            <option value="">All types</option>
+            ${types.map((t) => `<option value="${esc(t)}">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label" for="prop-filter-status">Status</label>
+          <select id="prop-filter-status" class="form-input">
+            <option value="">All statuses</option>
+            ${statuses.map((s) => `<option value="${esc(s)}">${esc(s.charAt(0).toUpperCase() + s.slice(1))}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label" for="prop-filter-search">Search</label>
+          <input id="prop-filter-search" class="form-input" placeholder="Locality, code, title…" />
+        </div>
+      </div>
+
+      <div id="prop-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:18px;">
+        ${props.length
+          ? props.map((p) => propCard(p, { actions: renderPropActions(p) })).join('')
+          : renderEmptyState('No properties', 'The inventory is empty.')}
+      </div>
+      <div id="prop-count" class="caption" style="margin-top:12px;">Showing ${props.length} of ${stats.total || props.length} listings.</div>
+    </div>
+
+    <!-- Share modal -->
+    <div id="prop-share-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h3 id="prop-share-title" style="font-size:18px; font-weight:700; margin-bottom:6px;">Send property details</h3>
+        <p class="caption" id="prop-share-sub" style="margin-bottom:18px;"></p>
+        <form id="prop-share-form">
+          <div class="form-group">
+            <label class="form-label" for="prop-share-portal">Send to</label>
+            <select id="prop-share-portal" class="form-input" required>
+              <option value="client">Client</option>
+              <option value="management">Management / Executive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-share-user">Recipient (optional)</label>
+            <input id="prop-share-user" class="form-input" placeholder="e.g. client1" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-share-note">Note (optional)</label>
+            <textarea id="prop-share-note" class="form-textarea" placeholder="Add a short note for the recipient…"></textarea>
+          </div>
+          <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+            <button type="button" class="btn btn-ghost" id="prop-share-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary"><span>Send</span> ${icons.send}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Price-change modal -->
+    <div id="prop-price-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h3 style="font-size:18px; font-weight:700; margin-bottom:6px;">Request a price change</h3>
+        <p class="caption" id="prop-price-sub" style="margin-bottom:18px;">
+          Price changes are <b>not</b> applied directly — the request is sent to Management/Executive for approval.
+        </p>
+        <form id="prop-price-form">
+          <div class="form-group">
+            <label class="form-label" for="prop-price-current">Current price (INR)</label>
+            <input id="prop-price-current" class="form-input" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-price-new">New price (INR)</label>
+            <input id="prop-price-new" class="form-input" type="number" min="1" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-price-reason">Reason</label>
+            <textarea id="prop-price-reason" class="form-textarea" placeholder="e.g. Market correction, comparable sales…"></textarea>
+          </div>
+          <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+            <button type="button" class="btn btn-ghost" id="prop-price-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary"><span>Submit request</span> ${icons.send}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+}
+
+function renderPropActions(p) {
+  const canAct = p.status !== 'sold'
+  return `
+    <button type="button" class="btn btn-primary btn-sm prop-share-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" ${canAct ? '' : 'disabled'}>
+      ${icons.send} Send to Client / Mgmt
+    </button>
+    <button type="button" class="btn btn-ghost btn-sm prop-price-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" data-current="${esc(p.price_inr)}" ${canAct ? '' : 'disabled'}>
+      Request price change
+    </button>
+  `
+}
+
+function bindPropertyEvents(block) {
+  const props = (block && block.properties) || []
+  const stats = (block && block.stats) || {}
+  const grid = document.getElementById('prop-grid')
+  const countEl = document.getElementById('prop-count')
+  if (!grid) return
+
+  // ---- filtering (client-side, over the live DB snapshot) ----
+  const fCity = document.getElementById('prop-filter-city')
+  const fType = document.getElementById('prop-filter-type')
+  const fStatus = document.getElementById('prop-filter-status')
+  const fSearch = document.getElementById('prop-filter-search')
+  const applyFilters = () => {
+    const c = fCity.value, t = fType.value, s = fStatus.value
+    const q = (fSearch.value || '').toLowerCase().trim()
+    const filtered = props.filter((p) =>
+      (!c || p.city === c) &&
+      (!t || p.type === t) &&
+      (!s || p.status === s) &&
+      (!q || (p.title + ' ' + p.locality + ' ' + p.property_code).toLowerCase().includes(q)))
+    grid.innerHTML = filtered.length
+      ? filtered.map((p) => propCard(p, { actions: renderPropActions(p) })).join('')
+      : renderEmptyState('No matches', 'No properties match the current filters.')
+    countEl.textContent = `Showing ${filtered.length} of ${stats.total || props.length} listings.`
+    bindPropCardButtons()
+  }
+  ;[fCity, fType, fStatus].forEach((el) => el && el.addEventListener('change', applyFilters))
+  fSearch && fSearch.addEventListener('input', applyFilters)
+
+  // ---- per-card action buttons (re-bound after each filter) ----
+  function bindPropCardButtons() {
+    document.querySelectorAll('.prop-share-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id')
+        const title = btn.getAttribute('data-title')
+        document.getElementById('prop-share-title').textContent = 'Send property details'
+        document.getElementById('prop-share-sub').textContent = title
+        document.getElementById('prop-share-form').dataset.pid = id
+        openModal('prop-share-modal')
+      })
+    })
+    document.querySelectorAll('.prop-price-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id')
+        const title = btn.getAttribute('data-title')
+        const current = btn.getAttribute('data-current')
+        document.getElementById('prop-price-sub').textContent = title
+        document.getElementById('prop-price-form').dataset.pid = id
+        document.getElementById('prop-price-current').value = Number(current || 0).toLocaleString('en-IN')
+        document.getElementById('prop-price-new').value = ''
+        document.getElementById('prop-price-reason').value = ''
+        openModal('prop-price-modal')
+      })
+    })
+  }
+  bindPropCardButtons()
+
+  // ---- share modal ----
+  document.getElementById('prop-share-cancel').addEventListener('click', () => closeModal('prop-share-modal'))
+  document.getElementById('prop-share-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const pid = e.target.dataset.pid
+    const to_portal = document.getElementById('prop-share-portal').value
+    const to_username = document.getElementById('prop-share-user').value.trim() || null
+    const note = document.getElementById('prop-share-note').value.trim()
+    try {
+      await api.propShare(pid, { to_portal, to_username, note })
+      showToast({ title: 'Property Sent', message: `Details sent to ${to_portal}.`, type: 'success' })
+      closeModal('prop-share-modal')
+      e.target.reset()
+    } catch (err) {
+      showToast({ title: 'Send Failed', message: err.message, type: 'error' })
+    }
+  })
+
+  // ---- price-change modal ----
+  document.getElementById('prop-price-cancel').addEventListener('click', () => closeModal('prop-price-modal'))
+  document.getElementById('prop-price-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const pid = e.target.dataset.pid
+    const requested_price = parseInt(document.getElementById('prop-price-new').value, 10)
+    const reason = document.getElementById('prop-price-reason').value.trim()
+    if (!requested_price || requested_price <= 0) {
+      showToast({ title: 'Invalid Price', message: 'Enter a positive price in INR.', type: 'error' })
+      return
+    }
+    try {
+      await api.propPriceRequest(pid, { requested_price, reason })
+      showToast({ title: 'Price Change Requested', message: 'Sent to Management/Executive for approval. The price has not changed yet.', type: 'success' })
+      closeModal('prop-price-modal')
+      e.target.reset()
+    } catch (err) {
+      showToast({ title: 'Request Failed', message: err.message, type: 'error' })
+    }
+  })
+}
+
+/* =============================================================
+   Management — Property Price-Change Approval Queue
+   ============================================================= */
+function renderPropertyPriceQueue(requests) {
+  const rows = (requests || []).map((r) => `
+    <tr>
+      <td>
+        <b>${esc(r.title)}</b>
+        <div class="caption">${esc(r.property_code)} · ${esc(r.city)}</div>
+      </td>
+      <td>${esc(r.requested_by || '—')}</td>
+      <td>
+        <span class="caption">${esc(r.current_price_display)}</span>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+          ${icons.arrowRight}
+          <b style="color:var(--role);">${esc(r.requested_price_display)}</b>
+        </div>
+      </td>
+      <td class="caption">${esc(r.reason || '—')}</td>
+      <td class="caption">${fmtDate(r.requested_at)}</td>
+      <td style="text-align:right; white-space:nowrap;">
+        <button type="button" class="btn btn-primary btn-sm prop-price-decide" data-id="${esc(r.id)}" data-action="approved" style="margin-right:6px;">Approve</button>
+        <button type="button" class="btn btn-ghost btn-sm prop-price-decide" data-id="${esc(r.id)}" data-action="rejected" style="color:var(--status-error-fg);">Reject</button>
+      </td>
+    </tr>
+  `).join('')
+  return `
+    <div class="glass-card card-pad-lg" id="sec-property-prices">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <h3>Property Price-Change Approvals</h3>
+          <p class="caption">Employee price changes wait here for executive sign-off before they are applied.</p>
+        </div>
+        <span class="badge badge-warning"><span class="dot"></span>${(requests || []).length} Awaiting</span>
+      </div>
+      ${(requests || []).length === 0
+        ? renderEmptyState('No pending price changes', 'All employee price-change requests have been decided.')
+        : `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Requested By</th>
+                <th>Price (current → new)</th>
+                <th>Reason</th>
+                <th>Date</th>
+                <th style="text-align:right;">Decide</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `
+}
+
+function bindPropertyPriceQueue() {
+  document.querySelectorAll('.prop-price-decide').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id')
+      const action = btn.getAttribute('data-action')
+      try {
+        await api.propPriceDecide(id, { decision: action, note: '' })
+        showToast({ title: `Price Change ${action}`, message: action === 'approved' ? 'New price applied to the property.' : 'Price change rejected; price unchanged.', type: 'success' })
+        btn.closest('tr')?.remove()
+        const badge = document.querySelector('#sec-property-prices .badge')
+        if (badge) {
+          const left = document.querySelectorAll('#sec-property-prices tbody tr').length
+          badge.innerHTML = `<span class="dot"></span>${left} Awaiting`
+        }
+        if (!document.querySelectorAll('#sec-property-prices tbody tr').length) {
+          loadPortalData()
+        }
+      } catch (e) {
+        showToast({ title: 'Decision Failed', message: e.message, type: 'error' })
+      }
+    })
+  })
+}
+
+/* =============================================================
+   Client — Properties shared with me
+   ============================================================= */
+function renderClientPropertySection(block) {
+  const shared = (block && block.shared_with_me) || []
+  return `
+    <div class="glass-card card-pad-lg" id="sec-client-properties">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <span class="icon-tile icon-tile-44" style="--role: var(--role);">${icons.building}</span>
+        <div>
+          <h3 style="margin-bottom:2px;">Properties Shared With Me</h3>
+          <p class="caption">Listings our team has sent to you for review.</p>
+        </div>
+      </div>
+      ${shared.length
+        ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:18px;">
+             ${shared.map((p) => propCard(p)).join('')}
+           </div>`
+        : renderEmptyState('No properties shared yet', 'When our team sends you a property, it will appear here.')}
+    </div>
+  `
 }
 
 /* =============================================================

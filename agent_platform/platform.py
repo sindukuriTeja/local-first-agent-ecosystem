@@ -48,6 +48,8 @@ class Platform:
     # Real-time collaboration workflow engine (client -> management ->
     # employee -> stakeholders -> response), with a live event bus.
     workflow: Optional[Any] = None
+    # Real-estate property inventory (local-first SQLite store).
+    properties: Optional[Any] = None
 
     def __post_init__(self):
         # convenience
@@ -381,6 +383,15 @@ def create_platform(config_path: Optional[str] = None,
         ai_runner=lambda user, prompt, state: _workflow_ai_runner(
             platform, user, prompt, state),
     )
+
+    # Real-estate property inventory (local-first SQLite store).
+    # Seeded with demo land/plots/flats/apartments across Hyderabad,
+    # Chennai and Bangalore on first open.
+    from .core.property_db import PropertyStore
+    prop_path = settings.resolve_path(
+        os.path.join(settings.storage.data_dir, "properties.db")
+    )
+    platform.properties = PropertyStore(prop_path, audit=audit)
 
     # Seed the knowledge store from a dataset if requested.
     if dataset_dir:

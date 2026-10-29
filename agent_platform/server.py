@@ -163,6 +163,22 @@ class WorkflowSendBack(BaseModel):
     workflow_id: str
     note: str
 
+# ---- property (real-estate database) request models ----------------------
+class PropertyShare(BaseModel):
+    to_portal: str  # client | management
+    to_username: Optional[str] = None
+    note: str = ""
+
+
+class PropertyPriceRequest(BaseModel):
+    requested_price: int
+    reason: str = ""
+
+
+class PropertyPriceDecision(BaseModel):
+    decision: str  # approved | rejected
+    note: str = ""
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
@@ -418,6 +434,71 @@ def create_app(platform=None) -> FastAPI:
                       user, user.username, user.portal,
                       req.workflow_id, req.note)
         return {"workflow_id": wf["id"], "status": wf["status"]}
+
+    # ---- property (real-estate database) -------------------------------
+    def _props():
+        p = get_platform()
+        if p.properties is None:
+            raise HTTPException(status_code=503,
+                                detail="property store not available")
+        return p.properties
+
+    def _prop_call(fn, *args, **kwargs):
+        """Run a property mutation, mapping store errors to HTTP codes."""
+        try:
+            return fn(*args, **kwargs)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+
+    @app.get("/api/properties")
+    def properties_list(user=Dep(current_user),
+                        city: Optional[str] = None,
+                        type: Optional[str] = None,
+                        status: Optional[str] = None,
+                        search: Optional[str] = None):
+        store = _props()
+        return {
+            "properties": store.list_properties(city=city, ptype=type,
+                                                status=status, search=search),
+            "stats": store.stats(),
+        }
+
+    @app.get("/api/properties/price-requests")
+    def properties_price_requests(user=Dep(current_user)):
+        store = _props()
+        return {"requests": store.pending_price_requests()}
+
+    @app.get("/api/properties/{property_id}")
+    def properties_get(property_id: str, user=Dep(current_user)):
+        store = _props()
+        prop = store.get_property(property_id)
+        if prop is None:
+            raise HTTPException(status_code=404, detail="property not found")
+        return prop
+
+    @app.post("/api/properties/{property_id}/share")
+    def properties_share(property_id: str, req: PropertyShare,
+                         user=Dep(current_user)):
+        return _prop_call(svc().share_property, user, property_id,
+                          req.to_portal, req.to_username, req.note)
+
+    @app.post("/api/properties/{property_id}/price-request")
+    def properties_price_request(property_id: str,
+                                 req: PropertyPriceRequest,
+                                 user=Dep(current_user)):
+        return _prop_call(svc().request_price_change, user, property_id,
+                          req.requested_price, req.reason)
+
+    @app.post("/api/properties/price-requests/{request_id}/decide")
+    def properties_price_decide(request_id: str,
+                                req: PropertyPriceDecision,
+                                user=Dep(current_user)):
+        return _prop_call(svc().decide_price_change, user, request_id,
+                          req.decision, req.note)
 
     # ---- real-time event stream (WebSocket) ----------------------------
     @app.websocket("/ws/workflow")
