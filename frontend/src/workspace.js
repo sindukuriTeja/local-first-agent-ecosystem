@@ -228,6 +228,15 @@ async function loadPortalData() {
     injectWorkflowPanel()
     // Subscribe to the live event stream; re-render the panel on each event.
     connectWorkflow(() => refreshWorkflowPanel())
+    // Polling fallback: refresh workflow panel every 5s in case WS misses an event
+    if (window._wfPollTimer) clearInterval(window._wfPollTimer)
+    window._wfPollTimer = setInterval(() => refreshWorkflowPanel(), 5000)
+    // Immediate refresh after 1s to catch any inputs created just before page load
+    setTimeout(() => refreshWorkflowPanel(), 1000)
+    // Also refresh when tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshWorkflowPanel()
+    }, { once: false })
   } catch (err) {
     contentArea.innerHTML = `
       <div class="glass-card card-pad-lg" style="border-color: var(--status-error-fg); text-align: center;">

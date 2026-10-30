@@ -288,32 +288,35 @@ function renderActivity(w) {
 
 // ---- client / tenant: my requests + answer inputs -----------------------
 function renderRequesterPanel(portal, wfs, inputs) {
-  const mine = wfs
+  // Only show workflows created by this portal (not all visible ones)
+  const mine = wfs.filter(w => w.created_by_portal === portal || inputs.some(i => i.workflow_id === w.id))
   const parts = []
   if (inputs.length > 0) {
     parts.push(`
-      <div style="margin-bottom:20px;">
-        <h4 style="margin-bottom:10px;">Action needed — respond to these</h4>
+      <div style="margin-bottom:20px; padding:16px; border-radius:var(--r-12); background:rgba(99,102,241,.08); border:2px solid rgba(99,102,241,.4);">
+        <h4 style="margin-bottom:12px; color:var(--role); display:flex; align-items:center; gap:8px;">
+          <span>🔔</span> Action needed — please respond
+        </h4>
         ${inputs.map((i) => `
-          <div class="wf-row" style="margin-bottom:10px;">
-            <b>${esc(i.question)}</b>
-            <div class="caption" style="margin:4px 0 8px;">
-              from ${esc(i.from_user)} · ${esc(i.subject)}
+          <div class="wf-row" style="margin-bottom:12px; background:var(--bg,#1e1e2e); padding:14px; border-radius:var(--r-12);">
+            <b style="font-size:14px;">${esc(i.question)}</b>
+            <div class="caption" style="margin:6px 0 10px;">
+              from ${esc(i.from_user)} · re: ${esc(i.subject)}
             </div>
             <div style="display:flex; gap:8px;">
-              <input class="form-input wf-answer-input" data-input="${i.input_id}" placeholder="Your answer…" />
-              <button class="btn btn-primary btn-sm wf-answer-btn" data-input="${i.input_id}">Send</button>
+              <input class="form-input wf-answer-input" data-input="${i.input_id}" placeholder="Type your answer here…" style="flex:1;" />
+              <button class="btn btn-primary wf-answer-btn" data-input="${i.input_id}" style="white-space:nowrap;">Send →</button>
             </div>
           </div>`).join('')}
       </div>`)
   }
-  if (mine.length === 0) {
+  if (mine.length === 0 && inputs.length === 0) {
     parts.push(renderEmpty('No requests yet', 'Use the form below to submit a request — management will be notified in real time.'))
-  } else {
+  } else if (mine.length > 0) {
     parts.push(`
       <div>
         <h4 style="margin-bottom:12px;">My Requests</h4>
-        ${mine.map((w) => `
+        ${mine.slice(0, 5).map((w) => `
           <div class="wf-row" style="margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; gap:12px;">
               <b>${esc(w.subject)}</b>
@@ -326,6 +329,12 @@ function renderRequesterPanel(portal, wfs, inputs) {
               <div style="margin-top:10px; padding:12px; border-radius:var(--r-12); background:var(--gl);">
                 <div class="caption" style="margin-bottom:6px;">Final response</div>
                 <div class="text-small" style="white-space:pre-wrap;">${esc(w.final_response)}</div>
+              </div>` : ''}
+            ${w.status === 'review_pending' && w.final_response ? `
+              <div style="margin-top:10px; padding:14px; border-radius:var(--r-12); background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.3);">
+                <div style="font-weight:700; font-size:13px; color:#16a34a; margin-bottom:8px;">📄 Your Sale & Purchase Agreement is ready</div>
+                <div class="text-small" style="white-space:pre-wrap; max-height:300px; overflow-y:auto;">${esc(w.final_response)}</div>
+                <div style="margin-top:10px; font-size:11px; color:var(--mu);">✅ Approved by Legal Advocate & Auditor — contact us to arrange signing.</div>
               </div>` : ''}
             ${renderActivity(w)}
           </div>`).join('')}
@@ -372,14 +381,36 @@ export async function refreshWorkflowPanel() {
   const portal = panel.dataset.portal
   try {
     const data = await api.portal()
-    const html = renderWorkflowPanel(portal, data.workflow)
+    const wfData = data.workflow
+    if (!wfData || !wfData.available) return
+
+    const html = renderWorkflowPanel(portal, wfData)
+    if (!html) return
+
     // Preserve any open modal + input focus.
     const modalRoot = document.getElementById('wf-modal-root')
     const modalHtml = modalRoot ? modalRoot.innerHTML : ''
     const focused = document.activeElement
     const fid = focused && focused.id ? focused.id : null
     const fval = focused && focused.value ? focused.value : null
-    panel.innerHTML = html
+
+    // Replace the outer panel element entirely so wf-panel doesn't nest
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    const newPanel = tmp.firstElementChild
+    const currentPanel = document.getElementById('wf-panel')
+    if (newPanel && currentPanel && currentPanel.parentNode) {
+      currentPanel.parentNode.replaceChild(newPanel, currentPanel)
+    } else if (newPanel) {
+      // Panel was removed from DOM — re-inject at top of content area
+      const contentArea = document.getElementById('workspace-content')
+      if (contentArea) contentArea.insertBefore(newPanel, contentArea.firstChild)
+    }
+
+    // Clear bound flag so event listeners are re-attached after re-render
+    const updatedPanel = document.getElementById('wf-panel')
+    if (updatedPanel) updatedPanel._wfBound = false
+
     // Re-attach modal + focus.
     const newModal = document.getElementById('wf-modal-root')
     if (newModal) newModal.innerHTML = modalHtml
@@ -417,7 +448,17 @@ export function bindWorkflowEvents(portal) {
     if (t.classList.contains('wf-answer-btn')) {
       const input = panel.querySelector(`.wf-answer-input[data-input="${t.dataset.input}"]`)
       if (input && input.value.trim()) {
-        await act('input/answer', { input_id: t.dataset.input, answer: input.value.trim() })
+        const answer = input.value.trim()
+        t.disabled = true
+        t.textContent = 'Sending…'
+        try {
+          await act('input/answer', { input_id: t.dataset.input, answer })
+        } catch (err) {
+          t.disabled = false
+          t.textContent = 'Send'
+          showToast && showToast({ title: 'Error', message: err.message || 'Failed to send answer', type: 'error' })
+          console.error('wf-answer-btn error:', err)
+        }
       }
     }
   })
@@ -441,8 +482,9 @@ async function act(endpoint, body) {
     'final-approve': () => api.wfFinalApprove(body),
     'send-back': () => api.wfSendBack(body),
   }
-  await map[endpoint]()
+  const result = await map[endpoint]()
   await refreshWorkflowPanel()
+  return result
 }
 
 // ---- lightweight modal (rendered into a body-level #wf-modal-root) -------
