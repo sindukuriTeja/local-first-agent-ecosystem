@@ -425,9 +425,17 @@ class PropertyStore:
 
     def shares_for_portal(self, portal: str,
                           username: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Properties shared to a portal (optionally a specific user)."""
+        """Properties shared to a portal (optionally a specific user).
+
+        Returns the FULL property row (all listing details) alongside the
+        share metadata (shared_by / shared_at / note) so receiving portals
+        — e.g. the client portal — can render the complete listing card.
+        """
         sql = ("SELECT s.*, p.property_code, p.title, p.city, p.locality, "
-               "p.type, p.area_sqft, p.price_inr "
+               "p.type, p.area_sqft, p.price_inr, p.price_per_sqft, "
+               "p.bedrooms, p.bathrooms, p.facing, p.age_years, "
+               "p.ownership, p.status, p.description, p.created_at, "
+               "p.updated_at "
                "FROM property_shares s JOIN properties p ON p.id=s.property_id "
                "WHERE s.to_portal=?")
         args: List[Any] = [portal]

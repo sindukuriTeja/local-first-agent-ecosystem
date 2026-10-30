@@ -1751,18 +1751,29 @@ function bindPropertyPriceQueue() {
    ============================================================= */
 function renderClientPropertySection(block) {
   const shared = (block && block.shared_with_me) || []
+  const shareFooter = (p) => {
+    const who = p.shared_by ? `Shared by <b>${esc(p.shared_by)}</b>` : 'Shared by our team'
+    const when = p.shared_at ? ` · ${esc(String(p.shared_at).slice(0, 10))}` : ''
+    const note = p.note ? `<div class="caption" style="margin-top:2px;">Note: ${esc(p.note)}</div>` : ''
+    return `
+      <div class="share-footer" style="display:flex; flex-direction:column; gap:2px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border, rgba(128,128,128,.25));">
+        <span class="caption">${who}${when}</span>
+        ${note}
+      </div>
+    `
+  }
   return `
     <div class="glass-card card-pad-lg" id="sec-client-properties">
       <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
         <span class="icon-tile icon-tile-44" style="--role: var(--role);">${icons.building}</span>
         <div>
           <h3 style="margin-bottom:2px;">Properties Shared With Me</h3>
-          <p class="caption">Listings our team has sent to you for review.</p>
+          <p class="caption">Full listings our team has sent to you for review.</p>
         </div>
       </div>
       ${shared.length
         ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:18px;">
-             ${shared.map((p) => propCard(p)).join('')}
+             ${shared.map((p) => propCard(p, { actions: shareFooter(p) })).join('')}
            </div>`
         : renderEmptyState('No properties shared yet', 'When our team sends you a property, it will appear here.')}
     </div>
