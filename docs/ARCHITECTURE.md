@@ -65,6 +65,7 @@ explains how it fits the larger **Self-Learning, Local-First Agent Ecosystem**.
 | 15. Reporting & Analytics Agent | `agents/agent_15_reporting.py` | Verified/labelled data only; report artifacts in `data/build_docs/`; external sharing → `external_share` approval; message → Agent 16. |
 | 16. Voice Notification Agent | `agents/agent_16_voice_notification.py` | Gates: approved message → role → calling hours → consent → identity check → call (simulated) → call log back to Agent 8. |
 | Stored knowledge + source records + extracted fields + matter records | `core/knowledge.py` (SQLite: `documents`, `chunks`, `facts`, `entities`, `relations`) | Sensitivity + tenant scoped. |
+| Governed RAG (documentation search + grounded answer) | `core/rag.py` (`RAGService`, `doc_in_scope`, property mirror) | Single scoped retrieval path for every portal role; mirrors the property inventory into the store. |
 | Official/permitted public sources | `config/settings.yaml → policy.permitted_external_sources` | Egress allowlist. |
 | Authorized human reviewer | `core/approval.py` + `POST /approvals/decide` / `cli approve` | Role-restricted (`approver_roles`). |
 | Audit log | `core/audit.py` (`data/audit_log.jsonl`) | Append-only; who/what/when/sources/result. |
@@ -295,3 +296,62 @@ realistic legal/compliance corpus: statutes, judgments, tax notices, land
 parcels, debt facilities, matters, entities, external docs, and a Q&A
 **exam set**. The documents seed the knowledge store (`seed_dataset`) and
 the exam set gates the learning engine (`learning.exam_path`).
+
+## 12. Governed RAG — documentation search for every role
+
+`core/rag.py` is the single "ask the documentation" path. It exists so
+that an **internal employee**, an **auditor**, and an **advocate** (and
+every other portal role) can retrieve information *from the stored
+documentation* through one governed surface, instead of each portal
+re-implementing retrieval.
+
+### 12.1 Scope — one rule, applied everywhere
+
+`doc_in_scope(user, doc)` is the single source of truth for
+matter/client/parcel scoping. It is used by **both** the portal document
+lists (`portal.PortalService._in_scope`) and the RAG search, so a
+document a user can see in their list is exactly the document they can
+retrieve. The full scope applied to every RAG query is:
+
+* **sensitivity ceiling** — role → max level (`core/policy.py` ladder),
+  enforced at the SQL level in `KnowledgeStore.search`.
+* **document-type filter** — e.g. the auditor only sees
+  `compliance`/`audit`/`case_analysis`/`tax` (`PORTAL_DOC_TYPES`),
+  enforced at the SQL level.
+* **tenant isolation** — per-tenant.
+* **assignment scope** — matter/client/parcel via `doc_in_scope`.
+
+This closes the previous scope leak: the document *list* was scoped by
+assignment but the raw *search* was not; now both apply the same rule.
+
+### 12.2 Grounded answer
+
+`RAGService.answer` retrieves scoped chunks, then either (a) asks the
+local model to answer from that evidence with citations, or (b) when the
+local model is offline, returns the best-matching evidence verbatim
+(`model=False`). The answer is always `grounded` only when evidence was
+found, and always carries its cited sources. This mirrors the
+`GroundedAnswerer` pattern used by the learning engine, so the RAG path
+and the eval path stay consistent.
+
+### 12.3 Property inventory mirror
+
+The real-estate inventory (`core/property_db.py`, `data/properties.db`)
+remains the source of truth for price/share/approval actions. On
+platform startup (and on demand via `platform.sync_properties()`) it is
+**mirrored** into the knowledge store as `doc_type='property'` documents
+(`source='property:<code>'`, `sensitivity='internal'`), upserted by
+source so re-syncs never duplicate. Property questions are therefore
+answered through the same governed RAG path as every other document,
+with citations.
+
+### 12.4 API + UI
+
+* `GET  /api/rag` — availability + suggested queries (any authenticated user).
+* `POST /api/rag/search` — scoped document search (any authenticated user).
+* `POST /api/rag/ask` — grounded, scoped answer (any authenticated user).
+
+These are available to **every** portal role (previously the only search
+endpoint, `GET /search`, was restricted to approver roles). The frontend
+renders a "Documentation Search" panel at the top of every portal
+workspace (search + ask, with suggested-query chips and cited results).

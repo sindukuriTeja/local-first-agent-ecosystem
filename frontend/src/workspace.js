@@ -224,6 +224,9 @@ async function loadPortalData() {
   try {
     portalData = await api.portal()
     renderActiveWorkspace(contentArea)
+    // Inject the governed RAG search panel (all roles) — the
+    // "ask the documentation" surface, scoped to this user.
+    injectRagPanel()
     // Inject the real-time collaboration workflow panel (all roles).
     injectWorkflowPanel()
     // Subscribe to the live event stream; re-render the panel on each event.
@@ -255,6 +258,142 @@ function injectWorkflowPanel() {
   // Prepend so it's the first thing each role sees.
   contentArea.insertBefore(holder.firstElementChild, contentArea.firstChild)
   bindWorkflowEvents(activeRoleKey)
+}
+
+/* =============================================================
+   RAG — governed documentation search (all roles)
+   Every portal can ask the firm's documentation store; results are
+   scoped to what this user may read (sensitivity + doc-type +
+   matter/client/parcel). Property inventory is included via the
+   mirrored property documents.
+   ============================================================= */
+function injectRagPanel() {
+  const contentArea = document.getElementById('workspace-content')
+  if (!contentArea || !portalData) return
+  const rag = portalData.rag || { available: false }
+  if (!rag.available) return
+  const holder = document.createElement('div')
+  holder.innerHTML = renderRagPanel(rag)
+  // Prepend so the search is the first thing each role sees.
+  contentArea.insertBefore(holder.firstElementChild, contentArea.firstChild)
+  bindRagEvents(rag)
+}
+
+function renderRagPanel(rag) {
+  const chips = (rag.suggested_queries || []).slice(0, 4)
+  return `
+    <div class="rag-panel glass-card card-pad-lg">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="icon-tile icon-tile-44" style="--role: var(--a1);">${icons.search}</span>
+          <div>
+            <h3 style="font-size:17px; margin:0;">Documentation Search</h3>
+            <p class="caption" style="margin:2px 0 0;">Ask the firm's knowledge base — scoped to your access.</p>
+          </div>
+        </div>
+        <span class="badge badge-role" style="font-size:11px;">Governed RAG</span>
+      </div>
+      ${chips.length ? `<div class="ai-chips-row" style="margin-bottom:12px;">
+        ${chips.map((c) => `<button type="button" class="ai-chip rag-chip">${esc(c)}</button>`).join('')}
+      </div>` : ''}
+      <div style="display:flex; gap:10px;">
+        <input id="rag-input" class="form-input" type="text"
+               placeholder="Search documents, cases, statutes, properties…" />
+        <button type="button" id="rag-search-btn" class="btn btn-primary"><span>Search</span></button>
+        <button type="button" id="rag-ask-btn" class="btn btn-ghost"><span>Ask</span></button>
+      </div>
+      <div id="rag-results" style="margin-top:16px;"></div>
+    </div>
+  `
+}
+
+function renderRagResults(res) {
+  const items = res.results || []
+  if (!items.length) {
+    return `<div class="text-small" style="color:var(--mu); padding:8px 0;">
+      No documents matched in your accessible scope.</div>`
+  }
+  return items.map((r) => `
+    <div style="border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+        <div style="min-width:0;">
+          <div style="font-weight:600; font-size:14px;">${esc(r.title || r.source)}</div>
+          <div style="margin-top:6px; font-size:13px; color:var(--mu); line-height:1.5;">${esc(r.excerpt || '')}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
+          ${renderSensBadge(r.sensitivity)}
+          <span class="badge badge-role" style="font-size:10px;">${esc(r.doc_type || '')}</span>
+        </div>
+      </div>
+      <div style="margin-top:8px; font-size:11.5px; color:var(--mu);">
+        source: <code>${esc(r.source)}</code> · match ${(r.score * 100).toFixed(0)}%
+      </div>
+    </div>
+  `).join('')
+}
+
+function renderRagAsk(res) {
+  const srcs = res.sources || []
+  const cite = srcs.length
+    ? `<div style="margin-top:10px; font-size:12px; color:var(--mu);">
+         Cited: ${srcs.map((s) => `<code>${esc(s.source)}</code>`).join(', ')}
+       </div>`
+    : ''
+  return `
+    <div style="border-left:3px solid var(--a1); background:var(--panel2, rgba(255,255,255,.03));
+                border-radius:0 12px 12px 0; padding:14px 16px;">
+      <div style="font-size:14px; line-height:1.6; white-space:pre-wrap;">${esc(res.answer || '')}</div>
+      ${cite}
+    </div>
+  `
+}
+
+async function runRagSearch() {
+  const input = document.getElementById('rag-input')
+  const results = document.getElementById('rag-results')
+  if (!input || !results) return
+  const q = input.value.trim()
+  if (!q) return
+  results.innerHTML = `<div class="caption" style="color:var(--mu);">Searching…</div>`
+  try {
+    const res = await api.ragSearch(q)
+    results.innerHTML = renderRagResults(res)
+  } catch (err) {
+    results.innerHTML = `<div class="text-small" style="color:var(--status-error-fg);">${esc(err.message)}</div>`
+  }
+}
+
+async function runRagAsk() {
+  const input = document.getElementById('rag-input')
+  const results = document.getElementById('rag-results')
+  if (!input || !results) return
+  const q = input.value.trim()
+  if (!q) return
+  results.innerHTML = `<div class="caption" style="color:var(--mu);">
+    Composing a grounded answer from your documents…</div>`
+  try {
+    const res = await api.ragAsk(q)
+    results.innerHTML = renderRagAsk(res)
+  } catch (err) {
+    results.innerHTML = `<div class="text-small" style="color:var(--status-error-fg);">${esc(err.message)}</div>`
+  }
+}
+
+function bindRagEvents() {
+  const input = document.getElementById('rag-input')
+  const searchBtn = document.getElementById('rag-search-btn')
+  const askBtn = document.getElementById('rag-ask-btn')
+  if (searchBtn) searchBtn.addEventListener('click', runRagSearch)
+  if (askBtn) askBtn.addEventListener('click', runRagAsk)
+  if (input) input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runRagSearch()
+  })
+  document.querySelectorAll('.rag-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (input) input.value = chip.textContent
+      runRagSearch()
+    })
+  })
 }
 
 // Route to role-specific workspace layout
