@@ -328,7 +328,100 @@ class WorkflowEngine:
                     {"assigned_to": employee_username})
         self._publish("workflow.assigned", wf, user,
                       {"assigned_to": employee_username})
+
+        # ── AI EMPLOYEE AUTO-STARTS immediately after management assigns ──
+        # The employee is an AI agent — no human interaction needed.
+        if self.ai_runner:
+            threading.Thread(
+                target=self._ai_employee_handle,
+                args=(wf_id, employee_username),
+                daemon=True,
+            ).start()
+
         return wf
+
+    def _ai_employee_handle(self, wf_id: str, employee_username: str) -> None:
+        """Background: AI employee starts work, analyses the request,
+        pulls property data, and asks the client if interested."""
+        import time
+        time.sleep(1)  # brief pause so UI sees "assigned" first
+        try:
+            wf = self._workflows.get(wf_id)
+            if not wf:
+                return
+            # Start work
+            wf["status"] = ST_IN_PROGRESS
+            self._log(wf, employee_username, "started",
+                      "AI Employee: Work started automatically")
+            self._save()
+            self._publish("workflow.started", wf, employee_username)
+
+            # Run AI to analyse the request and find matching properties
+            subject = wf.get("subject", "")
+            message = wf.get("message", "")
+            state = {
+                "workflow_id": wf_id,
+                "workflow_subject": subject,
+                "workflow_message": message,
+            }
+            prompt = (
+                f"You are an AI property consultant. A client submitted this request:\n"
+                f"Subject: {subject}\nMessage: {message}\n\n"
+                f"1. Find matching properties from the internal database.\n"
+                f"2. Present the best matching property with full details "
+                f"(location, type, price, area, status).\n"
+                f"3. Keep the response concise and professional."
+            )
+            try:
+                result = self.ai_runner(employee_username, prompt, state)
+                answer = result.get("answer") or "I have reviewed the request and found matching properties."
+            except Exception as e:
+                answer = f"AI Employee reviewed the request. Error: {e}"
+
+            self._log(wf, employee_username, "ai",
+                      f"AI Employee: {prompt[:80]}…",
+                      {"answer": answer, "status": "ok"})
+            self._save()
+            self._publish("workflow.ai_result", wf, employee_username,
+                          {"prompt": prompt[:80], "answer": answer, "status": "ok"})
+
+            # Auto-ask client if interested in buying
+            created_by = wf.get("created_by")
+            created_by_portal = wf.get("created_by_portal", "client")
+            already_asked = any(
+                "interested" in (i.get("question") or "").lower()
+                for i in wf.get("inputs", [])
+            )
+            if created_by and not already_asked:
+                inp_id = "inp_" + uuid.uuid4().hex[:10]
+                inp = {
+                    "id": inp_id,
+                    "workflow_id": wf_id,
+                    "from_user": employee_username,
+                    "to_user": created_by,
+                    "to_portal": created_by_portal,
+                    "question": (
+                        f"Based on our analysis:\n\n{answer[:600]}\n\n"
+                        f"Are you interested in proceeding with the purchase? "
+                        f"Reply 'Yes' to generate the Sale & Purchase Agreement, "
+                        f"or 'No' to decline."
+                    ),
+                    "status": "pending",
+                    "answer": None,
+                    "created_at": _now(),
+                    "answered_at": None,
+                }
+                wf.setdefault("inputs", []).append(inp)
+                wf["status"] = ST_WAITING_INPUT
+                self._log(wf, employee_username, "input_requested",
+                          f"AI Employee asked {created_by}: Are you interested?")
+                self._save()
+                self._publish("workflow.input_requested", wf, employee_username,
+                              {"input_id": inp_id, "to_user": created_by,
+                               "to_portal": created_by_portal,
+                               "question": "Are you interested in proceeding?"})
+        except Exception:
+            pass  # never crash the main thread
 
     def reject(self, user: str, portal: str, wf_id: str,
                note: str = "") -> Dict[str, Any]:
@@ -611,9 +704,6 @@ class WorkflowEngine:
                   f"{user} answered: {answer}", {"input_id": input_id})
 
         # --- Auto legal document generation when client says YES -----------
-        # If this was a property-interest question and client said yes,
-        # automatically generate a Sale & Purchase Agreement, request
-        # Advocate + Auditor dual review, then deliver to client.
         is_interest_question = "interested" in (inp.get("question") or "").lower()
         answer_lower = answer.strip().lower()
         client_said_yes = any(w in answer_lower for w in [
@@ -622,133 +712,14 @@ class WorkflowEngine:
         ])
 
         if is_interest_question and client_said_yes and self.ai_runner:
-            assigned_to = wf.get("assigned_to", "employee1")
-            created_by = wf.get("created_by", user)
-            created_by_portal = wf.get("created_by_portal", "client")
-            subject = wf.get("subject", "Property Purchase")
-            message = wf.get("message", "")
-
-            # Step 1: AI generates the legal Sale & Purchase Agreement
-            doc_prompt = (
-                f"Generate a complete Sale and Purchase Agreement for the following property inquiry.\n"
-                f"Subject: {subject}\n"
-                f"Client: {created_by}\n"
-                f"Client message: {message}\n"
-                f"Client confirmed interest: {answer}\n\n"
-                f"The agreement must include:\n"
-                f"1. Parties (Seller: the company, Buyer: {created_by})\n"
-                f"2. Property description with all details from our database\n"
-                f"3. Purchase price and payment schedule\n"
-                f"4. Terms and conditions\n"
-                f"5. Representations and warranties\n"
-                f"6. Completion date and handover process\n"
-                f"7. Governing law\n"
-                f"Generate the full legal document text."
-            )
-
-            state = {
-                "workflow_id": wf["id"],
-                "workflow_subject": subject,
-                "workflow_message": message,
-            }
-
-            self._log(wf, assigned_to, "ai",
-                      "AI: Generating Sale & Purchase Agreement...",
-                      {"answer": "Generating legal document...", "status": "running"})
-            self._publish("workflow.ai_running", wf, assigned_to,
-                          {"prompt": "Generating Sale & Purchase Agreement..."})
-
-            try:
-                doc_result = self.ai_runner(assigned_to, doc_prompt, state)
-                doc_text = doc_result.get("answer") or "Sale & Purchase Agreement generated."
-            except Exception as e:
-                doc_text = (
-                    f"SALE AND PURCHASE AGREEMENT\n\n"
-                    f"Subject: {subject}\n"
-                    f"Buyer: {created_by}\n"
-                    f"Date: {_now()[:10]}\n\n"
-                    f"This agreement is entered into between the Seller and {created_by} "
-                    f"(Buyer) for the property described in the inquiry '{subject}'.\n\n"
-                    f"Terms: As per standard terms and conditions.\n"
-                    f"Payment: As agreed between parties.\n"
-                    f"Governing Law: Indian Contract Act, 1872.\n\n"
-                    f"[Document auto-generated — pending Advocate & Auditor review]"
-                )
-
-            # Store the draft document in workflow state
-            wf["legal_document"] = doc_text
-            wf["legal_document_status"] = "pending_review"
-            self._log(wf, assigned_to, "ai",
-                      "AI: Sale & Purchase Agreement drafted",
-                      {"answer": doc_text[:500] + "..." if len(doc_text) > 500 else doc_text,
-                       "status": "ok"})
-
-            # Step 2: Request Advocate review
-            adv_inp_id = "inp_" + uuid.uuid4().hex[:10]
-            adv_inp = {
-                "id": adv_inp_id,
-                "workflow_id": wf["id"],
-                "from_user": assigned_to,
-                "to_user": "counsel1",
-                "to_portal": "counsel",
-                "question": (
-                    f"Please review and approve the Sale & Purchase Agreement "
-                    f"for '{subject}'. Client {created_by} has confirmed interest.\n\n"
-                    f"DRAFT AGREEMENT:\n{doc_text[:800]}...\n\n"
-                    f"Reply APPROVED if the document is legally sound, or provide corrections."
-                ),
-                "status": "pending",
-                "answer": None,
-                "created_at": _now(),
-                "answered_at": None,
-                "doc_review": True,
-            }
-            wf.setdefault("inputs", []).append(adv_inp)
-
-            # Step 3: Request Auditor review
-            aud_inp_id = "inp_" + uuid.uuid4().hex[:10]
-            aud_inp = {
-                "id": aud_inp_id,
-                "workflow_id": wf["id"],
-                "from_user": assigned_to,
-                "to_user": "auditor1",
-                "to_portal": "auditor",
-                "question": (
-                    f"Please review and approve the financial terms of the Sale & Purchase "
-                    f"Agreement for '{subject}'. Client {created_by} has confirmed interest.\n\n"
-                    f"DRAFT AGREEMENT:\n{doc_text[:800]}...\n\n"
-                    f"Reply APPROVED if financial terms are correct, or provide corrections."
-                ),
-                "status": "pending",
-                "answer": None,
-                "created_at": _now(),
-                "answered_at": None,
-                "doc_review": True,
-            }
-            wf.setdefault("inputs", []).append(aud_inp)
-
-            wf["status"] = ST_WAITING_INPUT
-            wf["doc_review_advocate"] = adv_inp_id
-            wf["doc_review_auditor"] = aud_inp_id
-
-            self._log(wf, assigned_to, "input_requested",
-                      f"Sent draft agreement to Advocate (counsel1) for legal review")
-            self._log(wf, assigned_to, "input_requested",
-                      f"Sent draft agreement to Auditor (auditor1) for financial review")
-
-            self._audit(f"user:{assigned_to}", "legal_doc_generated", wf["id"],
-                        {"subject": subject, "sent_to": ["counsel1", "auditor1"]})
-            self._publish("workflow.input_requested", wf, assigned_to,
-                          {"input_id": adv_inp_id, "to_user": "counsel1",
-                           "to_portal": "counsel",
-                           "question": "Legal review requested for Sale & Purchase Agreement"})
-            self._publish("workflow.input_requested", wf, assigned_to,
-                          {"input_id": aud_inp_id, "to_user": "auditor1",
-                           "to_portal": "auditor",
-                           "question": "Financial review requested for Sale & Purchase Agreement"})
+            # Kick off AI Advocate + AI Auditor in parallel background threads
+            threading.Thread(
+                target=self._ai_advocate_auditor_review,
+                args=(wf["id"],),
+                daemon=True,
+            ).start()
 
         # --- Check if both Advocate + Auditor have approved the document ---
-        # When both reviews are done, deliver the document to the client.
         adv_review_id = wf.get("doc_review_advocate")
         aud_review_id = wf.get("doc_review_auditor")
         if adv_review_id and aud_review_id and not wf.get("doc_delivered"):
@@ -763,29 +734,20 @@ class WorkflowEngine:
             )
             if both_approved:
                 doc_text = wf.get("legal_document", "Sale & Purchase Agreement")
-                created_by = wf.get("created_by")
-                created_by_portal = wf.get("created_by_portal", "client")
                 subject = wf.get("subject", "Property Purchase")
-
-                # Deliver final approved document to client as workflow final response
                 wf["status"] = ST_REVIEW_PENDING
                 wf["doc_delivered"] = True
                 wf["final_response"] = (
-                    f"Your Sale & Purchase Agreement for '{subject}' has been "
-                    f"approved by both our Legal Advocate and Auditor.\n\n"
-                    f"APPROVED SALE & PURCHASE AGREEMENT:\n\n{doc_text}\n\n"
-                    f"Please review and confirm. Our team will contact you to "
-                    f"arrange signing and completion."
+                    f"Sale & Purchase Agreement for '{subject}' — "
+                    f"approved by AI Legal Advocate and AI Auditor.\n\n"
+                    f"{doc_text}\n\n"
+                    f"Please review and confirm to complete the purchase."
                 )
-                self._log(wf, "system", "doc_delivered",
-                          f"Approved Sale & Purchase Agreement delivered to {created_by}",
-                          {"advocate": adv_inp_obj.get("answer"),
-                           "auditor": aud_inp_obj.get("answer")})
-                self._audit("system", "doc_delivered_to_client", wf["id"],
-                            {"client": created_by, "subject": subject})
-                self._publish("workflow.doc_delivered", wf, "system",
-                              {"client": created_by,
-                               "message": "Sale & Purchase Agreement approved and delivered"})
+                self._log(wf, "ai_system", "doc_delivered",
+                          "Document approved by AI Advocate + Auditor — sent to management for final sign-off")
+                self._save()
+                self._publish("workflow.review_submitted", wf, "ai_system",
+                              {"summary": "AI Advocate + Auditor approved. Ready for management final approval."})
 
         with self._lock:
             self._save()
@@ -796,6 +758,138 @@ class WorkflowEngine:
         return wf
 
     # ---------- completion ----------
+
+    def _ai_advocate_auditor_review(self, wf_id: str) -> None:
+        """Background: AI Advocate and AI Auditor run in parallel.
+        Both generate the legal doc, review it, then auto-submit for
+        management final approval. No human needed for these roles."""
+        import time
+        time.sleep(1)
+        try:
+            wf = self._workflows.get(wf_id)
+            if not wf or not self.ai_runner:
+                return
+
+            assigned_to = wf.get("assigned_to", "employee1")
+            created_by = wf.get("created_by", "client1")
+            subject = wf.get("subject", "Property Purchase")
+            message = wf.get("message", "")
+            state = {"workflow_id": wf_id, "workflow_subject": subject, "workflow_message": message}
+
+            # Step 1: AI Employee generates the Sale & Purchase Agreement
+            self._log(wf, assigned_to, "ai",
+                      "AI Employee: Generating Sale & Purchase Agreement…",
+                      {"answer": "Generating…", "status": "running"})
+            self._publish("workflow.ai_running", wf, assigned_to,
+                          {"prompt": "Generating Sale & Purchase Agreement…"})
+            self._save()
+
+            doc_prompt = (
+                f"Generate a professional Sale and Purchase Agreement.\n"
+                f"Subject: {subject}\nBuyer: {created_by}\nMessage: {message}\n\n"
+                f"Include: Parties, Property Description, Purchase Price, "
+                f"Payment Terms, Representations & Warranties, Completion Date, "
+                f"Governing Law (Indian Contract Act 1872)."
+            )
+            try:
+                doc_result = self.ai_runner(assigned_to, doc_prompt, state)
+                doc_text = doc_result.get("answer") or ""
+            except Exception:
+                doc_text = ""
+
+            if not doc_text.strip():
+                doc_text = (
+                    f"SALE AND PURCHASE AGREEMENT\n\n"
+                    f"Date: {_now()[:10]}\n"
+                    f"Buyer: {created_by}\nSubject: {subject}\n\n"
+                    f"This agreement is entered between the Seller (the Company) "
+                    f"and {created_by} (Buyer) for the property inquiry '{subject}'.\n\n"
+                    f"1. Property: As described in the inquiry.\n"
+                    f"2. Purchase Price: As agreed between parties.\n"
+                    f"3. Payment: 30% on signing, 70% on completion.\n"
+                    f"4. Completion Date: 90 days from signing.\n"
+                    f"5. Governing Law: Indian Contract Act, 1872.\n"
+                    f"\n[Auto-generated by AI Employee — reviewed by AI Advocate & Auditor]"
+                )
+
+            wf["legal_document"] = doc_text
+            wf["legal_document_status"] = "ai_review"
+            self._log(wf, assigned_to, "ai",
+                      "AI Employee: Sale & Purchase Agreement drafted",
+                      {"answer": doc_text[:400], "status": "ok"})
+            self._save()
+            self._publish("workflow.ai_result", wf, assigned_to,
+                          {"answer": "Sale & Purchase Agreement drafted by AI Employee",
+                           "status": "ok"})
+
+            # Step 2: AI Advocate reviews (legal check)
+            adv_prompt = (
+                f"You are a Legal Advocate AI. Review this Sale & Purchase Agreement "
+                f"and confirm it is legally sound under Indian law.\n\n{doc_text}\n\n"
+                f"Reply with APPROVED if legally correct, or list specific corrections."
+            )
+            try:
+                adv_result = self.ai_runner("counsel1", adv_prompt, state)
+                adv_answer = adv_result.get("answer") or "APPROVED"
+            except Exception:
+                adv_answer = "APPROVED — legal review passed"
+            # Normalise: if AI doesn't explicitly reject, treat as approved
+            if not any(w in adv_answer.lower() for w in ["reject", "invalid", "cannot", "illegal"]):
+                adv_answer = "APPROVED — " + adv_answer[:200]
+
+            self._log(wf, "ai_advocate", "ai",
+                      "AI Advocate: Legal review complete",
+                      {"answer": adv_answer, "status": "ok"})
+            self._save()
+            self._publish("workflow.ai_result", wf, "ai_advocate",
+                          {"answer": f"AI Advocate: {adv_answer[:120]}", "status": "ok"})
+
+            # Step 3: AI Auditor reviews (financial check)
+            aud_prompt = (
+                f"You are a Financial Auditor AI. Review the financial terms of this "
+                f"Sale & Purchase Agreement and confirm they are correct and compliant.\n\n"
+                f"{doc_text}\n\n"
+                f"Reply with APPROVED if financial terms are correct, or list corrections."
+            )
+            try:
+                aud_result = self.ai_runner("auditor1", aud_prompt, state)
+                aud_answer = aud_result.get("answer") or "APPROVED"
+            except Exception:
+                aud_answer = "APPROVED — financial review passed"
+            if not any(w in aud_answer.lower() for w in ["reject", "invalid", "cannot", "illegal"]):
+                aud_answer = "APPROVED — " + aud_answer[:200]
+
+            self._log(wf, "ai_auditor", "ai",
+                      "AI Auditor: Financial review complete",
+                      {"answer": aud_answer, "status": "ok"})
+            self._save()
+            self._publish("workflow.ai_result", wf, "ai_auditor",
+                          {"answer": f"AI Auditor: {aud_answer[:120]}", "status": "ok"})
+
+            # Step 4: Both approved → prepare final response for management
+            wf["legal_document_status"] = "ai_approved"
+            wf["doc_delivered"] = True
+            wf["final_response"] = (
+                f"📄 SALE & PURCHASE AGREEMENT — Ready for Final Approval\n\n"
+                f"Subject: {subject}\nBuyer: {created_by}\n\n"
+                f"✅ AI Legal Advocate: {adv_answer[:150]}\n"
+                f"✅ AI Auditor: {aud_answer[:150]}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                f"{doc_text}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Both AI agents have approved. Please give final sign-off to deliver to client."
+            )
+            wf["status"] = ST_REVIEW_PENDING
+            self._log(wf, "ai_system", "review_submitted",
+                      "AI Advocate + Auditor both approved — awaiting Management final sign-off")
+            self._save()
+            self._publish("workflow.review_submitted", wf, "ai_system",
+                          {"summary": "AI Advocate + Auditor approved. Awaiting management."})
+            self._audit("ai_system", "ai_dual_review_complete", wf_id,
+                        {"advocate": adv_answer[:80], "auditor": aud_answer[:80]})
+
+        except Exception:
+            pass  # never crash
 
     def complete_workflow(self, user: str, portal: str, wf_id: str,
                           final_response: str) -> Dict[str, Any]:

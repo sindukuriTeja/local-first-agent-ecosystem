@@ -159,18 +159,26 @@ function renderManagementPanel(wfs) {
         : inReview.map((w) => {
             const lastReview = [...(w.activity || [])].reverse().find((a) => a.kind === 'review_submitted')
             return `
-          <div class="wf-row" data-wf="${w.id}" style="margin-bottom:14px;">
-            <div style="min-width:0;">
-              <b>${esc(w.subject)}</b>
-              <div class="caption" style="margin-top:2px;">
-                from ${esc(w.created_by)} (${esc(w.created_by_portal)}) · done by ${esc(w.assigned_to)}
-                ${w.review_submitted_at ? ' · submitted ' + fmtTime(w.review_submitted_at) : ''}
+          <div class="wf-row" data-wf="${w.id}" data-final-response="${esc(w.final_response || '')}" style="margin-bottom:14px;">
+            <div style="min-width:0; width:100%;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                <div>
+                  <b>${esc(w.subject)}</b>
+                  <div class="caption" style="margin-top:2px;">
+                    from ${esc(w.created_by)} (${esc(w.created_by_portal)}) · done by ${esc(w.assigned_to)}
+                    ${w.review_submitted_at ? ' · submitted ' + fmtTime(w.review_submitted_at) : ''}
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-shrink:0;">
+                  <button class="btn btn-primary btn-sm wf-final-approve-btn" data-wf="${w.id}">✅ Final Approve</button>
+                  <button class="btn btn-ghost btn-sm wf-sendback-btn" data-wf="${w.id}" style="color:var(--status-error-fg);">Send back</button>
+                </div>
               </div>
-              ${lastReview ? `<p class="text-small" style="margin:8px 0 0; white-space:pre-wrap;">${esc(lastReview.text)}</p>` : ''}
-            </div>
-            <div style="display:flex; gap:8px; flex-shrink:0;">
-              <button class="btn btn-primary btn-sm wf-final-approve-btn" data-wf="${w.id}">It's good — proceed</button>
-              <button class="btn btn-ghost btn-sm wf-sendback-btn" data-wf="${w.id}" style="color:var(--status-error-fg);">Send back</button>
+              ${w.final_response ? `
+              <div style="margin-top:10px; padding:12px; border-radius:var(--r-12); background:rgba(34,197,94,.06); border:1px solid rgba(34,197,94,.25); max-height:200px; overflow-y:auto;">
+                <div style="font-size:11px; font-weight:700; color:#16a34a; margin-bottom:6px;">📄 AI-PREPARED DOCUMENT (AI Advocate + AI Auditor approved)</div>
+                <div class="text-small" style="white-space:pre-wrap;">${esc(w.final_response.slice(0, 600))}${w.final_response.length > 600 ? '…' : ''}</div>
+              </div>` : lastReview ? `<p class="text-small" style="margin:8px 0 0; white-space:pre-wrap;">${esc(lastReview.text)}</p>` : ''}
             </div>
           </div>`}).join('')}
     </div>
@@ -625,16 +633,22 @@ function openCompleteModal(wfId) {
   document.getElementById('complete').dataset.wf = wfId
 }
 function openFinalApproveModal(wfId) {
-  openModal("Final approval — it's good, we can proceed", `
+  // Pre-populate with the AI-prepared final response if available
+  const wfCard = document.querySelector(`[data-wf="${wfId}"][data-final-response]`)
+  const preText = wfCard ? (wfCard.dataset.finalResponse || '') : ''
+  openModal("Final approval — review & send to client", `
+    <div style="margin-bottom:12px; padding:10px 14px; border-radius:8px; background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.3); font-size:13px;">
+      ✅ <strong>AI Legal Advocate</strong> and <strong>AI Auditor</strong> have both approved this document. Review below and click Confirm to deliver to the client.
+    </div>
     <div class="form-group">
       <label class="form-label">Final response to the client</label>
-      <textarea id="wf-final-response" class="form-textarea" rows="5" required placeholder="The message the client will receive once you approve…"></textarea>
+      <textarea id="wf-final-response" class="form-textarea" rows="8" required placeholder="The message the client will receive once you approve…">${esc(preText)}</textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Internal note (optional)</label>
       <input id="wf-final-note" class="form-input" placeholder="For the record" />
     </div>
-    <p class="caption">Approving delivers the final response to the requester and closes the workflow.</p>`, 'final-approve')
+    <p class="caption">Approving delivers the final response to the client and closes the workflow.</p>`, 'final-approve')
   document.getElementById('final-approve').dataset.wf = wfId
 }
 function openSendBackModal(wfId) {
