@@ -109,7 +109,7 @@ WORKABLE_STATES = {
 }
 
 # Portals allowed to *create* a request
-REQUESTER_PORTALS = {"client", "tenant"}
+REQUESTER_PORTALS = {"client", "tenant", "management"}
 # Portals allowed to *approve / assign*
 APPROVER_PORTALS = {"management", "admin"}
 # Portals allowed to give final approval (broader — includes doc reviewers)
