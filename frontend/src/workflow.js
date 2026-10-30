@@ -342,7 +342,7 @@ function renderRequesterPanel(portal, wfs, inputs) {
               <div style="margin-top:10px; padding:14px; border-radius:var(--r-12); background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.3);">
                 <div style="font-weight:700; font-size:13px; color:#16a34a; margin-bottom:8px;">📄 Your Sale & Purchase Agreement is ready</div>
                 <div class="text-small" style="white-space:pre-wrap; max-height:300px; overflow-y:auto;">${esc(w.final_response)}</div>
-                <div style="margin-top:10px; font-size:11px; color:var(--mu);">✅ Approved by Legal Advocate & Auditor — contact us to arrange signing.</div>
+                <div style="margin-top:10px; font-size:11px; color:var(--mu);">✅ Reviewed by AI Legal Advocate & AI Auditor. Approved by Management — contact us to arrange signing.</div>
               </div>` : ''}
             ${renderActivity(w)}
           </div>`).join('')}
@@ -528,15 +528,19 @@ async function handleModalSubmit(e) {
   const kind = form.dataset.wfKind
   if (!kind) return
   const val = (id) => (form.querySelector(id) ? form.querySelector(id).value.trim() : '')
+  // Get portal from the wf-panel
+  const panel = document.getElementById('wf-panel')
+  const portal = panel ? panel.dataset.portal : ''
+  const isMgmt = portal === 'management' || portal === 'admin'
   try {
-    if (kind === 'assign') await act('approve', { workflow_id: form.dataset.wf, employee_username: val('#wf-assign-user'), note: val('#wf-assign-note') })
-    if (kind === 'reject') await act('reject', { workflow_id: form.dataset.wf, note: val('#wf-reject-note') })
+    if (kind === 'assign') { if (!isMgmt) { showToast({ title: 'Not allowed', message: 'Only management can approve', type: 'error' }); closeModal(); return } await act('approve', { workflow_id: form.dataset.wf, employee_username: val('#wf-assign-user'), note: val('#wf-assign-note') }) }
+    if (kind === 'reject') { if (!isMgmt) { closeModal(); return } await act('reject', { workflow_id: form.dataset.wf, note: val('#wf-reject-note') }) }
     if (kind === 'ai') await act('ai', { workflow_id: form.dataset.wf, prompt: val('#wf-ai-prompt') })
     if (kind === 'input') await act('input', { workflow_id: form.dataset.wf, to_user: val('#wf-input-user'), to_portal: val('#wf-input-portal'), question: val('#wf-input-q') })
     if (kind === 'note') await act('activity', { workflow_id: form.dataset.wf, kind: 'note', text: val('#wf-note-text') })
     if (kind === 'complete') await act('complete', { workflow_id: form.dataset.wf, final_response: val('#wf-complete-text') })
-    if (kind === 'final-approve') await act('final-approve', { workflow_id: form.dataset.wf, final_response: val('#wf-final-response'), note: val('#wf-final-note') })
-    if (kind === 'send-back') await act('send-back', { workflow_id: form.dataset.wf, note: val('#wf-sendback-note') })
+    if (kind === 'final-approve') { if (!isMgmt) { showToast({ title: 'Not allowed', message: 'Only management can give final approval', type: 'error' }); closeModal(); return } await act('final-approve', { workflow_id: form.dataset.wf, final_response: val('#wf-final-response'), note: val('#wf-final-note') }) }
+    if (kind === 'send-back') { if (!isMgmt) { closeModal(); return } await act('send-back', { workflow_id: form.dataset.wf, note: val('#wf-sendback-note') }) }
     closeModal()
   } catch (err) {
     showToast({ title: 'Workflow error', message: err.message, type: 'error' })
