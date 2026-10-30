@@ -97,6 +97,13 @@ export const api = {
       body: { approval_id, decision, note },
     }),
 
+  // RAG — governed documentation search + grounded answer (all roles)
+  ragStatus: () => request('/api/rag'),
+  ragSearch: (query, top_k = null) =>
+    request('/api/rag/search', { method: 'POST', body: { query, top_k } }),
+  ragAsk: (query, top_k = null) =>
+    request('/api/rag/ask', { method: 'POST', body: { query, top_k } }),
+
   // real-time collaboration workflow
   wfList: () => request('/api/workflow'),
   wfCreate: (subject, message, matter = null) =>
@@ -130,6 +137,24 @@ export const api = {
     request(`/api/properties/price-requests/${requestId}/decide`, {
       method: 'POST',
       body,
+    }),
+
+  // purchase workflow (property sale)
+  purchaseProperties: () => request('/api/purchase/properties'),
+  purchasePropose: (property_id, buyer, note = '') =>
+    request('/api/purchase/propose', {
+      method: 'POST',
+      body: { property_id, buyer, note },
+    }),
+  purchaseDecision: (workflow_id, decision, note = '') =>
+    request('/api/purchase/decision', {
+      method: 'POST',
+      body: { workflow_id, decision, note },
+    }),
+  purchaseSign: (workflow_id, note = '') =>
+    request('/api/purchase/sign', {
+      method: 'POST',
+      body: { workflow_id, note },
     }),
 
   // admin
