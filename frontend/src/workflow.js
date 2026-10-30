@@ -449,10 +449,13 @@ export function bindWorkflowEvents(portal) {
   panel.addEventListener('click', async (e) => {
     const t = e.target.closest('button')
     if (!t) return
-    if (t.classList.contains('wf-approve-btn')) openAssignModal(t.dataset.wf)
-    if (t.classList.contains('wf-reject-btn')) openRejectModal(t.dataset.wf)
-    if (t.classList.contains('wf-final-approve-btn')) openFinalApproveModal(t.dataset.wf)
-    if (t.classList.contains('wf-sendback-btn')) openSendBackModal(t.dataset.wf)
+    // Management-only actions — block for other portals
+    const isMgmt = portal === 'management' || portal === 'admin'
+    if (t.classList.contains('wf-approve-btn')) { if (isMgmt) openAssignModal(t.dataset.wf); return }
+    if (t.classList.contains('wf-reject-btn')) { if (isMgmt) openRejectModal(t.dataset.wf); return }
+    if (t.classList.contains('wf-final-approve-btn')) { if (isMgmt) openFinalApproveModal(t.dataset.wf); return }
+    if (t.classList.contains('wf-sendback-btn')) { if (isMgmt) openSendBackModal(t.dataset.wf); return }
+    // Worker actions
     if (t.classList.contains('wf-start-btn')) await act('start', { workflow_id: t.dataset.wf })
     if (t.classList.contains('wf-ai-btn')) openAiModal(t.dataset.wf)
     if (t.classList.contains('wf-input-btn')) openInputModal(t.dataset.wf)
