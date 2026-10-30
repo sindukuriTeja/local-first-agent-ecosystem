@@ -312,6 +312,9 @@ function renderEmployeeWorkspace(container) {
     <!-- Property Database (real-estate) -->
     ${propertyBlock.available ? renderPropertySection(propertyBlock) : ''}
 
+    <!-- My Purchase Requests (Buy This) -->
+    ${propertyBlock.available ? renderEmployeePurchaseSection(propertyBlock) : ''}
+
     <!-- 4 Stat Cards with Tickers -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
       <div class="glass-card card-spotlight card-pad-sm">
@@ -388,6 +391,7 @@ function renderEmployeeWorkspace(container) {
   bindAiTaskEvents()
   bindLegalTabs(statutes, judgments)
   if (propertyBlock.available) bindPropertyEvents(propertyBlock)
+  if (propertyBlock.available) bindEmployeePurchaseEvents()
   initTickersInContainer(container)
 }
 
@@ -555,8 +559,12 @@ function renderAdvocateWorkspace(container) {
   const draftsToReview = portalData.drafts_to_review || portalData.drafts || []
   const sharedDocs = portalData.documents || []
   const research = portalData.research || []
+  const purchaseBlock = portalData.purchase_requests || { available: false }
 
   container.innerHTML = `
+    <!-- Property Purchase Reviews (Advocate) -->
+    ${purchaseBlock.available ? renderPurchaseReviewQueue(purchaseBlock) : ''}
+
     <!-- Top Row: Matters card list (hero) + Drafts to review panel -->
     <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px;" id="sec-cases">
       <!-- Matters Hero Card List -->
@@ -614,6 +622,7 @@ function renderAdvocateWorkspace(container) {
   `
 
   bindAiTaskEvents()
+  if (purchaseBlock.available) bindPurchaseReviewEvents()
 }
 
 /* =============================================================
@@ -873,8 +882,12 @@ function renderTenantWorkspace(container) {
 function renderAuditorWorkspace(container) {
   const auditTrail = portalData.audit_trail || []
   const complianceRecords = portalData.compliance_records || []
+  const purchaseBlock = portalData.purchase_requests || { available: false }
 
   container.innerHTML = `
+    <!-- Property Purchase Reviews (Auditor) -->
+    ${purchaseBlock.available ? renderPurchaseReviewQueue(purchaseBlock) : ''}
+
     <!-- Hero: Vertical Audit Timeline + Filter Chips + Chain Verified Badge -->
     <div class="glass-card card-pad-lg" id="sec-audit">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
@@ -957,6 +970,7 @@ function renderAuditorWorkspace(container) {
   `
 
   bindAuditorSearch(complianceRecords)
+  if (purchaseBlock.available) bindPurchaseReviewEvents()
 }
 
 /* =============================================================
@@ -1275,13 +1289,63 @@ function renderPropertySection(block) {
         </form>
       </div>
     </div>
+
+    <!-- Buy This (purchase request) modal -->
+    <div id="prop-buy-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h3 style="font-size:18px; font-weight:700; margin-bottom:6px;">Buy This Property</h3>
+        <p class="caption" id="prop-buy-sub" style="margin-bottom:18px;"></p>
+        <div class="caption" id="prop-buy-price" style="margin-bottom:16px; font-size:14px; font-weight:600; color:var(--role);"></div>
+        <p class="caption" style="margin-bottom:16px;">
+          The purchase request is routed to the <b>Advocate</b> (legal review) and the
+          <b>Auditor</b> (compliance review). Once <b>both approve</b>, a sale &amp; purchase
+          agreement is generated and the property is marked <b>Sold</b>.
+        </p>
+        <form id="prop-buy-form">
+          <div class="form-group">
+            <label class="form-label" for="prop-buy-name">Buyer name *</label>
+            <input id="prop-buy-name" class="form-input" placeholder="Full legal name of the buyer" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-buy-contact">Buyer contact</label>
+            <input id="prop-buy-contact" class="form-input" placeholder="Phone / email" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-buy-email">Buyer email</label>
+            <input id="prop-buy-email" class="form-input" type="email" placeholder="buyer@example.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-buy-id">Buyer ID proof</label>
+            <input id="prop-buy-id" class="form-input" placeholder="e.g. PAN / Aadhaar / Passport no." />
+          </div>
+          <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+            <button type="button" class="btn btn-ghost" id="prop-buy-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary"><span>Submit purchase request</span> ${icons.wallet}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Purchase agreement modal -->
+    <div id="prop-agreement-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-card" style="max-width:720px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="font-size:18px; font-weight:700;">Sale &amp; Purchase Agreement</h3>
+          <button type="button" class="btn btn-ghost btn-sm" id="prop-agreement-close">${icons.x} Close</button>
+        </div>
+        <pre id="prop-agreement-text" style="white-space:pre-wrap; font-family:var(--font-mono, monospace); font-size:12.5px; line-height:1.5; background:var(--bg-soft, rgba(0,0,0,.03)); padding:16px; border-radius:12px; max-height:60vh; overflow:auto;"></pre>
+      </div>
+    </div>
   `
 }
 
 function renderPropActions(p) {
   const canAct = p.status !== 'sold'
   return `
-    <button type="button" class="btn btn-primary btn-sm prop-share-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" ${canAct ? '' : 'disabled'}>
+    <button type="button" class="btn btn-primary btn-sm prop-buy-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" data-price="${esc(p.price_display)}" ${canAct ? '' : 'disabled'}>
+      ${icons.wallet} Buy This
+    </button>
+    <button type="button" class="btn btn-ghost btn-sm prop-share-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" ${canAct ? '' : 'disabled'}>
       ${icons.send} Send to Client / Mgmt
     </button>
     <button type="button" class="btn btn-ghost btn-sm prop-price-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" data-current="${esc(p.price_inr)}" ${canAct ? '' : 'disabled'}>
@@ -1321,6 +1385,17 @@ function bindPropertyEvents(block) {
 
   // ---- per-card action buttons (re-bound after each filter) ----
   function bindPropCardButtons() {
+    document.querySelectorAll('.prop-buy-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id')
+        const title = btn.getAttribute('data-title')
+        const price = btn.getAttribute('data-price')
+        document.getElementById('prop-buy-sub').textContent = title
+        document.getElementById('prop-buy-price').textContent = price ? `Asking price: ${price}` : ''
+        document.getElementById('prop-buy-form').dataset.pid = id
+        openModal('prop-buy-modal')
+      })
+    })
     document.querySelectorAll('.prop-share-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id')
@@ -1365,6 +1440,33 @@ function bindPropertyEvents(block) {
     }
   })
 
+  // ---- Buy This (purchase request) modal ----
+  document.getElementById('prop-buy-cancel').addEventListener('click', () => closeModal('prop-buy-modal'))
+  document.getElementById('prop-buy-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const pid = e.target.dataset.pid
+    const buyer_name = document.getElementById('prop-buy-name').value.trim()
+    if (!buyer_name) {
+      showToast({ title: 'Buyer Required', message: 'Enter the buyer name.', type: 'error' })
+      return
+    }
+    try {
+      await api.propPurchase(pid, {
+        buyer_name,
+        buyer_contact: document.getElementById('prop-buy-contact').value.trim(),
+        buyer_email: document.getElementById('prop-buy-email').value.trim(),
+        buyer_id_proof: document.getElementById('prop-buy-id').value.trim(),
+      })
+      showToast({ title: 'Purchase Requested', message: 'Sent to the Advocate and Auditor for review. The agreement is generated once both approve.', type: 'success' })
+      closeModal('prop-buy-modal')
+      e.target.reset()
+      loadPortalData()
+    } catch (err) {
+      showToast({ title: 'Request Failed', message: err.message, type: 'error' })
+    }
+  })
+  document.getElementById('prop-agreement-close').addEventListener('click', () => closeModal('prop-agreement-modal'))
+
   // ---- price-change modal ----
   document.getElementById('prop-price-cancel').addEventListener('click', () => closeModal('prop-price-modal'))
   document.getElementById('prop-price-form').addEventListener('submit', async (e) => {
@@ -1384,6 +1486,181 @@ function bindPropertyEvents(block) {
     } catch (err) {
       showToast({ title: 'Request Failed', message: err.message, type: 'error' })
     }
+  })
+}
+
+/* =============================================================
+   Purchase (Buy This) — employee "my requests" + reviewer queues
+   ============================================================= */
+function purchaseStatusBadge(status) {
+  const map = {
+    pending: ['badge-warning', 'In Review'],
+    approved: ['badge-success', 'Approved · Agreement Ready'],
+    rejected: ['badge-error', 'Rejected'],
+  }
+  const [cls, label] = map[status] || ['badge-info', status]
+  return `<span class="badge ${cls}"><span class="dot"></span>${label}</span>`
+}
+
+function reviewStateCell(r, role) {
+  const v = r[role + '_review'] || 'pending'
+  const map = { pending: ['badge-info', 'Pending'], approved: ['badge-success', 'Approved'], rejected: ['badge-error', 'Rejected'] }
+  const [cls, label] = map[v] || ['badge-info', v]
+  return `<span class="badge ${cls}">${label}</span>`
+}
+
+function renderEmployeePurchaseSection(block) {
+  const mine = (block && block.my_purchase_requests) || []
+  const rows = mine.map((r) => `
+    <tr>
+      <td>
+        <b>${esc(r.title)}</b>
+        <div class="caption">${esc(r.property_code)} · ${esc(r.city)}</div>
+      </td>
+      <td>${esc(r.buyer_name)}</td>
+      <td>${esc(r.price_display || '—')}</td>
+      <td>${reviewStateCell(r, 'advocate')}</td>
+      <td>${reviewStateCell(r, 'auditor')}</td>
+      <td>${purchaseStatusBadge(r.status)}</td>
+      <td class="caption">${fmtDate(r.requested_at)}</td>
+      <td style="text-align:right; white-space:nowrap;">
+        ${r.status === 'approved' && r.agreement_text
+          ? `<button type="button" class="btn btn-primary btn-sm prop-agreement-btn" data-id="${esc(r.id)}">${icons.fileText} View agreement</button>`
+          : ''}
+      </td>
+    </tr>
+  `).join('')
+  return `
+    <div class="glass-card card-pad-lg" id="sec-my-purchases">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <h3>My Purchase Requests</h3>
+          <p class="caption">Properties you marked “Buy This”. Each needs Advocate + Auditor approval before the agreement is issued.</p>
+        </div>
+        <span class="badge badge-role"><span class="dot"></span>${mine.length} Total</span>
+      </div>
+      ${mine.length === 0
+        ? renderEmptyState('No purchase requests yet', 'Use “Buy This” on a property to start a purchase.')
+        : `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Property</th><th>Buyer</th><th>Price</th>
+                <th>Advocate</th><th>Auditor</th><th>Status</th><th>Filed</th>
+                <th style="text-align:right;">Agreement</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `
+}
+
+function bindEmployeePurchaseEvents() {
+  document.querySelectorAll('.prop-agreement-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id')
+      try {
+        const data = await api.propPurchaseGet(id)
+        if (data && data.agreement_text) {
+          document.getElementById('prop-agreement-text').textContent = data.agreement_text
+          openModal('prop-agreement-modal')
+        } else {
+          showToast({ title: 'No Agreement', message: 'The agreement is not available yet.', type: 'error' })
+        }
+      } catch (e) {
+        showToast({ title: 'Load Failed', message: e.message, type: 'error' })
+      }
+    })
+  })
+}
+
+/* =============================================================
+   Advocate / Auditor — Purchase Review Queue
+   ============================================================= */
+function renderPurchaseReviewQueue(block) {
+  const queue = (block && block.queue) || []
+  const role = (block && block.reviewer_role) === 'auditor' ? 'Auditor' : 'Advocate'
+  const rows = queue.map((r) => `
+    <tr>
+      <td>
+        <b>${esc(r.title)}</b>
+        <div class="caption">${esc(r.property_code)} · ${esc(r.city)}</div>
+      </td>
+      <td>
+        ${esc(r.buyer_name)}
+        <div class="caption">${esc(r.buyer_contact || '')}${r.buyer_email ? ' · ' + esc(r.buyer_email) : ''}</div>
+      </td>
+      <td>${esc(r.price_display || '—')}</td>
+      <td>${reviewStateCell(r, 'advocate')}</td>
+      <td>${reviewStateCell(r, 'auditor')}</td>
+      <td class="caption">${esc(r.requested_by || '—')}</td>
+      <td style="text-align:right; white-space:nowrap;">
+        <button type="button" class="btn btn-primary btn-sm prop-purchase-decide" data-id="${esc(r.id)}" data-action="approved" style="margin-right:6px;">Approve</button>
+        <button type="button" class="btn btn-ghost btn-sm prop-purchase-decide" data-id="${esc(r.id)}" data-action="rejected" style="color:var(--status-error-fg);">Reject</button>
+      </td>
+    </tr>
+  `).join('')
+  return `
+    <div class="glass-card card-pad-lg" id="sec-purchase-review">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <h3>Property Purchase Reviews (${role})</h3>
+          <p class="caption">Buy This requests awaiting your review. Approving (along with the other reviewer) issues the sale &amp; purchase agreement and marks the property Sold.</p>
+        </div>
+        <span class="badge badge-warning"><span class="dot"></span>${queue.length} Awaiting</span>
+      </div>
+      ${queue.length === 0
+        ? renderEmptyState('No purchase reviews pending', 'All Buy This requests have been reviewed.')
+        : `
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Property</th><th>Buyer</th><th>Price</th>
+                <th>Advocate</th><th>Auditor</th><th>Filed By</th>
+                <th style="text-align:right;">Decide</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `
+}
+
+function bindPurchaseReviewEvents() {
+  document.querySelectorAll('.prop-purchase-decide').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id')
+      const action = btn.getAttribute('data-action')
+      try {
+        await api.propPurchaseDecide(id, { decision: action, note: '' })
+        const done = action === 'approved'
+        showToast({
+          title: done ? 'Purchase Approved' : 'Purchase Rejected',
+          message: done
+            ? 'Your approval is recorded. The agreement is issued once both reviewers approve.'
+            : 'The purchase request was rejected and closed.',
+          type: done ? 'success' : 'info',
+        })
+        btn.closest('tr')?.remove()
+        const badge = document.querySelector('#sec-purchase-review .badge')
+        if (badge) {
+          const left = document.querySelectorAll('#sec-purchase-review tbody tr').length
+          badge.innerHTML = `<span class="dot"></span>${left} Awaiting`
+        }
+        if (!document.querySelectorAll('#sec-purchase-review tbody tr').length) {
+          loadPortalData()
+        }
+      } catch (e) {
+        showToast({ title: 'Decision Failed', message: e.message, type: 'error' })
+      }
+    })
   })
 }
 

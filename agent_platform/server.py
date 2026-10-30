@@ -179,6 +179,18 @@ class PropertyPriceDecision(BaseModel):
     decision: str  # approved | rejected
     note: str = ""
 
+
+class PropertyPurchaseRequest(BaseModel):
+    buyer_name: str
+    buyer_contact: str = ""
+    buyer_email: str = ""
+    buyer_id_proof: str = ""
+
+
+class PropertyPurchaseDecision(BaseModel):
+    decision: str  # approved | rejected
+    note: str = ""
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
@@ -498,6 +510,30 @@ def create_app(platform=None) -> FastAPI:
                                 req: PropertyPriceDecision,
                                 user=Dep(current_user)):
         return _prop_call(svc().decide_price_change, user, request_id,
+                          req.decision, req.note)
+
+    # ---- purchase requests (Buy This flow) --------------------------
+    @app.post("/api/properties/{property_id}/purchase")
+    def properties_purchase(property_id: str,
+                            req: PropertyPurchaseRequest,
+                            user=Dep(current_user)):
+        return _prop_call(svc().request_purchase, user, property_id,
+                          req.buyer_name, req.buyer_contact, req.buyer_email,
+                          req.buyer_id_proof)
+
+    @app.get("/api/properties/purchase-requests/{request_id}")
+    def properties_purchase_get(request_id: str, user=Dep(current_user)):
+        store = _props()
+        req = store.get_purchase_request(request_id)
+        if req is None:
+            raise HTTPException(status_code=404, detail="purchase request not found")
+        return req
+
+    @app.post("/api/properties/purchase-requests/{request_id}/decide")
+    def properties_purchase_decide(request_id: str,
+                                   req: PropertyPurchaseDecision,
+                                   user=Dep(current_user)):
+        return _prop_call(svc().decide_purchase_review, user, request_id,
                           req.decision, req.note)
 
     # ---- real-time event stream (WebSocket) ----------------------------

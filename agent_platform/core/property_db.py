@@ -85,10 +85,35 @@ CREATE TABLE IF NOT EXISTS price_change_requests (
     note             TEXT
 );
 
+CREATE TABLE IF NOT EXISTS purchase_requests (
+    id                 TEXT PRIMARY KEY,
+    property_id        TEXT NOT NULL,
+    buyer_name         TEXT NOT NULL,
+    buyer_contact      TEXT,
+    buyer_email        TEXT,
+    buyer_id_proof     TEXT,
+    requested_by       TEXT,
+    requested_at       TEXT,
+    status             TEXT NOT NULL DEFAULT 'pending',
+    advocate_review    TEXT NOT NULL DEFAULT 'pending',
+    advocate_note      TEXT,
+    advocate_reviewed_at TEXT,
+    auditor_review     TEXT NOT NULL DEFAULT 'pending',
+    auditor_note       TEXT,
+    auditor_reviewed_at TEXT,
+    agreement_id       TEXT,
+    agreement_text     TEXT,
+    agreed_at          TEXT,
+    rejected_by        TEXT,
+    rejection_reason   TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_properties_city   ON properties(city);
 CREATE INDEX IF NOT EXISTS idx_properties_type   ON properties(type);
 CREATE INDEX IF NOT EXISTS idx_shares_property   ON property_shares(property_id);
 CREATE INDEX IF NOT EXISTS idx_price_status      ON price_change_requests(status);
+CREATE INDEX IF NOT EXISTS idx_purchase_status   ON purchase_requests(status);
+CREATE INDEX IF NOT EXISTS idx_purchase_property ON purchase_requests(property_id);
 """
 
 
@@ -330,6 +355,7 @@ class PropertyStore:
         d = self._row_to_dict(row)
         d["shares"] = self.shares_for_property(property_id)
         d["price_requests"] = self.price_requests_for_property(property_id)
+        d["purchase_requests"] = self.purchase_requests_for_property(property_id)
         return d
 
     def stats(self) -> Dict[str, Any]:
@@ -344,12 +370,16 @@ class PropertyStore:
             pending_price = conn.execute(
                 "SELECT COUNT(*) c FROM price_change_requests WHERE status='pending'"
             ).fetchone()["c"]
+        pending_purchase = conn.execute(
+            "SELECT COUNT(*) c FROM purchase_requests WHERE status='pending'"
+        ).fetchone()["c"]
         return {
             "total": total,
             "by_city": by_city,
             "by_type": by_type,
             "by_status": by_status,
             "pending_price_requests": pending_price,
+            "pending_purchase_requests": pending_purchase,
             "cities": CITIES,
             "types": PROPERTY_TYPES,
             "statuses": STATUSES,
@@ -562,6 +592,173 @@ class PropertyStore:
                     result=decision, user=decided_by)
         return self.get_price_request(request_id)
 
+    # ---------- purchase requests (Buy This flow) ------------------------
+    def request_purchase(self, property_id: str, buyer_name: str,
+                         buyer_contact: str = "", buyer_email: str = "",
+                         buyer_id_proof: str = "",
+                         requested_by: str = "") -> Optional[Dict[str, Any]]:
+        """File a purchase (Buy This) request for a property.
+
+        The request starts ``pending`` and is routed to the advocate and the
+        auditor for review. It becomes ``approved`` only when BOTH reviewers
+        approve; the first rejection closes it as ``rejected``. On approval a
+        purchase agreement is generated and the property is marked ``sold``.
+        """
+        buyer_name = (buyer_name or "").strip()
+        if not buyer_name:
+            raise ValueError("buyer_name is required")
+        with self._conn() as conn:
+            prop = conn.execute(
+                "SELECT property_code, title, status FROM properties WHERE id=?",
+                (property_id,)).fetchone()
+            if prop is None:
+                return None
+            if prop["status"] == "sold":
+                raise ValueError("property is already sold")
+            open_req = conn.execute(
+                """SELECT 1 FROM purchase_requests
+                   WHERE property_id=? AND status='pending' LIMIT 1""",
+                (property_id,)).fetchone()
+            if open_req is not None:
+                raise ValueError("a purchase request for this property is already in review")
+            rid = _new_id("prq")
+            now = _now()
+            conn.execute(
+                """INSERT INTO purchase_requests
+                   (id, property_id, buyer_name, buyer_contact, buyer_email,
+                    buyer_id_proof, requested_by, requested_at, status)
+                   VALUES (?,?,?,?,?,?,?,?, 'pending')""",
+                (rid, property_id, buyer_name, buyer_contact, buyer_email,
+                 buyer_id_proof, requested_by, now),
+            )
+        self._audit(f"user:{requested_by}", "property_purchase_requested",
+                    {"request_id": rid, "property_id": property_id,
+                     "property_code": prop["property_code"],
+                     "buyer_name": buyer_name},
+                    result="pending", user=requested_by)
+        return self.get_purchase_request(rid)
+
+    def get_purchase_request(self, request_id: str) -> Optional[Dict[str, Any]]:
+        with self._conn() as conn:
+            row = conn.execute(
+                """SELECT r.*, p.property_code, p.title, p.city, p.locality,
+                          p.type, p.area_sqft, p.price_inr, p.price_per_sqft,
+                          p.ownership, p.description
+                   FROM purchase_requests r
+                   JOIN properties p ON p.id=r.property_id
+                   WHERE r.id=?""", (request_id,)).fetchone()
+        return dict(row) if row else None
+
+    def pending_purchase_requests(self) -> List[Dict[str, Any]]:
+        """Open purchase requests (any role can list; review is role-gated)."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                """SELECT r.*, p.property_code, p.title, p.city, p.locality,
+                          p.type, p.price_inr
+                   FROM purchase_requests r
+                   JOIN properties p ON p.id=r.property_id
+                   WHERE r.status='pending'
+                   ORDER BY r.requested_at DESC""").fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["price_display"] = _inr(d.get("price_inr"))
+            out.append(d)
+        return out
+
+    def purchase_requests_for_property(self, property_id: str) -> List[Dict[str, Any]]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM purchase_requests WHERE property_id=? "
+                "ORDER BY requested_at DESC", (property_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def purchase_requests_by_user(self, username: str) -> List[Dict[str, Any]]:
+        """Purchase requests filed by a user, joined with property details."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                """SELECT r.*, p.property_code, p.title, p.city, p.locality,
+                          p.type, p.price_inr
+                   FROM purchase_requests r
+                   JOIN properties p ON p.id=r.property_id
+                   WHERE r.requested_by=?
+                   ORDER BY r.requested_at DESC""", (username,)).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["price_display"] = _inr(d.get("price_inr"))
+            out.append(d)
+        return out
+
+    def decide_purchase_review(self, request_id: str, reviewer_role: str,
+                               decision: str, decided_by: str,
+                               note: str = "") -> Optional[Dict[str, Any]]:
+        """Record an advocate or auditor review of a pending purchase request.
+
+        ``reviewer_role`` must be ``advocate`` or ``auditor``.
+        ``approved`` -> that reviewer's column is set; when BOTH are approved
+        the request is finalized: an agreement is generated, the property is
+        marked ``sold`` and the status becomes ``approved``.
+        ``rejected`` -> the request is closed as ``rejected`` immediately.
+        """
+        if reviewer_role not in ("advocate", "auditor"):
+            raise ValueError("reviewer_role must be advocate | auditor")
+        if decision not in ("approved", "rejected"):
+            raise ValueError("decision must be approved | rejected")
+        now = _now()
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM purchase_requests WHERE id=?",
+                (request_id,)).fetchone()
+            if row is None:
+                return None
+            if row["status"] != "pending":
+                raise ValueError(f"request already {row['status']}")
+            if row[reviewer_role + "_review"] != "pending":
+                raise ValueError(f"already reviewed by {reviewer_role}")
+
+            if decision == "rejected":
+                conn.execute(
+                    f"""UPDATE purchase_requests
+                        SET status='rejected', {reviewer_role}_review='rejected',
+                            {reviewer_role}_note=?, {reviewer_role}_reviewed_at=?,
+                            rejected_by=?, rejection_reason=?
+                        WHERE id=?""",
+                    (note, now, decided_by, note, request_id))
+            else:
+                conn.execute(
+                    f"""UPDATE purchase_requests
+                        SET {reviewer_role}_review='approved',
+                            {reviewer_role}_note=?, {reviewer_role}_reviewed_at=?
+                        WHERE id=?""",
+                    (note, now, request_id))
+                updated = conn.execute(
+                    "SELECT * FROM purchase_requests WHERE id=?",
+                    (request_id,)).fetchone()
+                if updated["advocate_review"] == "approved" and \
+                        updated["auditor_review"] == "approved":
+                    # Both reviewers approved -> generate agreement + mark sold.
+                    prop = conn.execute(
+                        "SELECT * FROM properties WHERE id=?",
+                        (row["property_id"],)).fetchone()
+                    agr_id = _new_id("agr")
+                    agreement_text = _build_purchase_agreement(updated, prop,
+                                                               agr_id, now)
+                    conn.execute(
+                        """UPDATE purchase_requests
+                           SET status='approved', agreement_id=?,
+                               agreement_text=?, agreed_at=?
+                           WHERE id=?""",
+                        (agr_id, agreement_text, now, request_id))
+                    conn.execute(
+                        "UPDATE properties SET status='sold', updated_at=? "
+                        "WHERE id=?", (now, row["property_id"]))
+        self._audit(f"user:{decided_by}", "property_purchase_reviewed",
+                    {"request_id": request_id, "reviewer_role": reviewer_role,
+                     "decision": decision, "note": note},
+                    result=decision, user=decided_by)
+        return self.get_purchase_request(request_id)
+
     # ---------- demo data export (for delivery) --------------------------
     def demo_data(self) -> List[Dict[str, Any]]:
         """Return the seeded demo inventory as plain dicts."""
@@ -573,6 +770,126 @@ class PropertyStore:
                 "description")}
             for p in _DEMO_PROPERTIES
         ]
+
+
+# ---------------------------------------------------------------------------
+# purchase agreement generation
+# ---------------------------------------------------------------------------
+def _inr_words(value: Optional[int]) -> str:
+    """Convert an INR amount to Indian-English words (e.g. 1,15,00,000 ->
+    'Rupees One Crore Fifteen Lakh Only')."""
+    if not value:
+        return "Rupees Nil"
+    n = int(value)
+    if n == 0:
+        return "Rupees Nil"
+
+    def _below_100(v: int) -> str:
+        units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+                 "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen",
+                 "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+                 "Nineteen"]
+        tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy",
+                "Eighty", "Ninety"]
+        if v < 20:
+            return units[v]
+        return (tens[v // 10] + (" " + units[v % 10] if v % 10 else "")).strip()
+
+    parts: List[str] = []
+    for scale, name in ((10000000, "Crore"), (100000, "Lakh"), (1000, "Thousand")):
+        if n >= scale:
+            parts.append(f"{_below_100(n // scale)} {name}")
+            n %= scale
+    if n >= 100:
+        parts.append(f"{_below_100(n // 100)} Hundred")
+        n %= 100
+    if n:
+        parts.append(_below_100(n))
+    return "Rupees " + " ".join(parts) + " Only"
+
+
+def _build_purchase_agreement(req: sqlite3.Row, prop: sqlite3.Row,
+                              agreement_id: str, agreed_at: str = "") -> str:
+    """Render the sale & purchase agreement text for an approved request."""
+    price = prop["price_inr"]
+    price_words = _inr_words(price)
+    per_sqft = prop["price_per_sqft"] or (
+        int(price / prop["area_sqft"]) if prop["area_sqft"] else None)
+    beds = prop["bedrooms"]
+    detail_lines = [
+        f"Property Code : {prop['property_code']}",
+        f"Description   : {prop['title']}",
+        f"Location      : {prop['locality']}, {prop['city']}",
+        f"Type          : {_type_label(prop['type'])}",
+    ]
+    if prop["area_sqft"]:
+        detail_lines.append(f"Area          : {prop['area_sqft']:,.0f} sqft")
+    if beds is not None:
+        detail_lines.append(
+            f"Configuration : {beds} BHK"
+            + (f" / {prop['bathrooms']} Bath" if prop["bathrooms"] else ""))
+    if prop["ownership"]:
+        detail_lines.append(f"Ownership     : {prop['ownership']}")
+    if per_sqft:
+        detail_lines.append(f"Rate          : INR {per_sqft:,} per sqft")
+    detail_block = "\n".join(detail_lines)
+    return f"""SALE AND PURCHASE AGREEMENT
+(Generated by the Local-First Agent Ecosystem — Property Desk)
+
+Agreement ID : {agreement_id}
+Date         : {(agreed_at or req['agreed_at'] or '')[:10]}
+
+BETWEEN
+
+The Firm (Seller)
+Property inventory record {prop['property_code']}, managed through the
+governed property desk of the firm.
+
+AND
+
+The Buyer (Purchaser)
+Name   : {req['buyer_name']}
+Contact: {req['buyer_contact'] or '—'}
+Email  : {req['buyer_email'] or '—'}
+ID Proof on file : {req['buyer_id_proof'] or '—'}
+
+1. PROPERTY
+{detail_block}
+
+2. CONSIDERATION
+The agreed sale price is {price_words} (INR {price:,}), inclusive of all
+taxes and charges unless stated otherwise.
+
+3. TITLE & POSSESSION
+The Seller warrants that it holds clear and marketable title to the
+property, free from encumbrances, and that possession shall be handed over
+on receipt of the full consideration, subject to the terms of this
+agreement.
+
+4. APPROVALS & COMPLIANCE
+This sale has been reviewed and approved by the firm's Advocate (legal
+review) and Auditor (compliance review) as a condition of execution.
+Advocate review : approved {req['advocate_reviewed_at'][:10] if req['advocate_reviewed_at'] else ''}
+Auditor review  : approved {req['auditor_reviewed_at'][:10] if req['auditor_reviewed_at'] else ''}
+
+5. PAYMENT & REGISTRATION
+The Buyer shall pay the consideration as agreed, and the parties shall
+complete registration of the sale deed in accordance with the applicable
+local registration laws.
+
+6. GOVERNING LAW
+This agreement shall be governed by the laws of India.
+
+7. ACKNOWLEDGEMENT
+By execution of this agreement, both parties confirm that they have read,
+understood and agreed to the terms above.
+
+____________________________          ____________________________
+Seller (authorized signatory)               Buyer: {req['buyer_name']}
+
+This document was generated automatically after dual review
+(Advocate + Auditor) and is recorded in the platform audit log.
+"""
 
 
 # ---------------------------------------------------------------------------

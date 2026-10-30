@@ -131,6 +131,16 @@ export const api = {
       method: 'POST',
       body,
     }),
+  // Buy This (purchase) flow
+  propPurchase: (id, body) =>
+    request(`/api/properties/${id}/purchase`, { method: 'POST', body }),
+  propPurchaseGet: (requestId) =>
+    request(`/api/properties/purchase-requests/${requestId}`),
+  propPurchaseDecide: (requestId, body) =>
+    request(`/api/properties/purchase-requests/${requestId}/decide`, {
+      method: 'POST',
+      body,
+    }),
 
   // admin
   adminUsers: () => request('/api/admin/users'),

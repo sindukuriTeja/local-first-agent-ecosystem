@@ -171,6 +171,7 @@ class PortalService:
             "documents": [_doc_view(d, include_content=False) for d in docs[:60]],
             "ai_tasks": self._ai_task_prompts(user),
             "properties": self._property_block(user),
+            "purchase_requests": self._purchase_block(user),
         }
 
     # ---- management --------------------------------------------------
@@ -228,6 +229,7 @@ class PortalService:
             "research": research,
             "documents": [_doc_view(d, include_content=False) for d in docs[:60]],
             "ai_tasks": self._ai_task_prompts(user),
+            "purchase_requests": self._purchase_block(user),
         }
 
     # ---- client ------------------------------------------------------
@@ -262,6 +264,7 @@ class PortalService:
         return {
             "compliance_records": records,
             "audit_trail": self.p.audit_query(limit=200),
+            "purchase_requests": self._purchase_block(user),
             "note": "You see only explicitly shared compliance/audit records "
                     "(controlled access).",
         }
@@ -337,7 +340,34 @@ class PortalService:
             "properties": store.list_properties(),
             "my_shares": store.shares_by_user(user.username),
             "my_price_requests": store.price_requests_by_user(user.username),
+            "my_purchase_requests": store.purchase_requests_by_user(user.username),
         }
+
+    def _purchase_block(self, user: PortalUser) -> Dict[str, Any]:
+        """Purchase (Buy This) review queue, scoped to the reviewer's role.
+
+        - counsel  -> pending requests awaiting the ADVOCATE review
+        - auditor  -> pending requests awaiting the AUDITOR review
+        - employee -> their own requests (any status)
+        """
+        store = self._props()
+        if store is None:
+            return {"available": False}
+        if user.portal == "counsel":
+            queue = [r for r in store.pending_purchase_requests()
+                     if r.get("advocate_review") == "pending"]
+            return {"available": True, "queue": queue,
+                    "reviewer_role": "advocate"}
+        if user.portal == "auditor":
+            queue = [r for r in store.pending_purchase_requests()
+                     if r.get("auditor_review") == "pending"]
+            return {"available": True, "queue": queue,
+                    "reviewer_role": "auditor"}
+        if user.portal == "employee":
+            return {"available": True, "queue": [],
+                    "reviewer_role": None,
+                    "mine": store.purchase_requests_by_user(user.username)}
+        return {"available": False}
 
     def _client_property_block(self, user: PortalUser) -> Dict[str, Any]:
         """Client view: only the properties an employee sent to them."""
@@ -395,6 +425,54 @@ class PortalService:
             raise
         if res is None:
             raise KeyError(f"price request {request_id} not found")
+        return res
+
+    # ---- purchase requests (Buy This flow) ---------------------------
+    def request_purchase(self, user: PortalUser, property_id: str,
+                         buyer_name: str, buyer_contact: str = "",
+                         buyer_email: str = "",
+                         buyer_id_proof: str = "") -> Dict[str, Any]:
+        """Employee files a Buy This request for a property."""
+        store = self._props()
+        if store is None:
+            raise ValueError("property store not available")
+        try:
+            res = store.request_purchase(
+                property_id, buyer_name, buyer_contact, buyer_email,
+                buyer_id_proof, requested_by=user.username)
+        except ValueError as e:
+            if "already" in str(e):
+                raise KeyError(str(e))
+            raise
+        if res is None:
+            raise KeyError(f"property {property_id} not found")
+        return res
+
+    def decide_purchase_review(self, user: PortalUser, request_id: str,
+                               decision: str, note: str = "") -> Dict[str, Any]:
+        """Advocate (counsel portal) or Auditor reviews a purchase request.
+
+        The reviewer's role is derived from their portal so a counsel can
+        only record the advocate review and an auditor only the auditor
+        review.
+        """
+        reviewer_role = {"counsel": "advocate", "auditor": "auditor"}.get(
+            user.portal)
+        if reviewer_role is None:
+            raise PermissionError(
+                f"Portal '{user.portal}' cannot review purchase requests.")
+        store = self._props()
+        if store is None:
+            raise ValueError("property store not available")
+        try:
+            res = store.decide_purchase_review(request_id, reviewer_role,
+                                               decision, user.username, note)
+        except ValueError as e:
+            if "already" in str(e):
+                raise KeyError(str(e))
+            raise
+        if res is None:
+            raise KeyError(f"purchase request {request_id} not found")
         return res
 
     # ------------------------------------------------------------------
