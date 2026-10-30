@@ -205,6 +205,99 @@ class KnowledgeStore:
             start = max(end - overlap, start + 1)
         return [c for c in chunks if c]
 
+    def upsert_document(
+        self,
+        title: str,
+        content: str,
+        source: str,
+        doc_type: str = "note",
+        sensitivity: str = "internal",
+        tenant: str = "default",
+        metadata: Optional[Dict[str, Any]] = None,
+        status: str = "active",
+    ) -> Tuple[str, bool]:
+        """Insert a document, or update it in place if one with the same
+        ``source`` already exists. Returns ``(doc_id, updated)``.
+
+        Used by the property mirror (``core/rag.py``) so the knowledge
+        store stays in sync with the property database without growing a
+        duplicate row on every sync.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id FROM documents WHERE source = ? LIMIT 1", (source,)
+            ).fetchone()
+            if row is not None:
+                doc_id = row["id"]
+                self._conn.execute(
+                    "UPDATE documents SET title=?, content=?, doc_type=?, "
+                    "sensitivity=?, tenant=?, status=?, updated_at=?, metadata=? "
+                    "WHERE id=?",
+                    (title, content, doc_type, sensitivity, tenant, status,
+                     now, json.dumps(metadata or {}), doc_id),
+                )
+                # Re-chunk: drop old chunks, insert fresh ones.
+                self._conn.execute(
+                    "DELETE FROM chunks WHERE document_id = ?", (doc_id,))
+                for i, chunk_text in enumerate(self._chunk(content)):
+                    chunk_id = uuid.uuid4().hex
+                    embedding = None
+                    if self.embedder is not None:
+                        try:
+                            vec = self.embedder(chunk_text)
+                            if vec is not None:
+                                embedding = np.asarray(vec, dtype=np.float32).tobytes()
+                        except Exception:
+                            embedding = None
+                    self._conn.execute(
+                        "INSERT INTO chunks (id, document_id, chunk_index, "
+                        "content, embedding) VALUES (?,?,?,?,?)",
+                        (chunk_id, doc_id, i, chunk_text, embedding),
+                    )
+                self._conn.commit()
+                return doc_id, True
+            # New document.
+            doc_id = uuid.uuid4().hex
+            self._conn.execute(
+                "INSERT INTO documents (id, title, content, source, doc_type, "
+                "sensitivity, tenant, status, created_at, updated_at, metadata) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (doc_id, title, content, source, doc_type, sensitivity, tenant,
+                 status, now, now, json.dumps(metadata or {})),
+            )
+            for i, chunk_text in enumerate(self._chunk(content)):
+                chunk_id = uuid.uuid4().hex
+                embedding = None
+                if self.embedder is not None:
+                    try:
+                        vec = self.embedder(chunk_text)
+                        if vec is not None:
+                            embedding = np.asarray(vec, dtype=np.float32).tobytes()
+                    except Exception:
+                        embedding = None
+                self._conn.execute(
+                    "INSERT INTO chunks (id, document_id, chunk_index, content, "
+                    "embedding) VALUES (?,?,?,?,?)",
+                    (chunk_id, doc_id, i, chunk_text, embedding),
+                )
+            self._conn.commit()
+            return doc_id, False
+
+    def delete_by_source(self, source: str) -> int:
+        """Delete a document (and its chunks) by source. Returns rowcount."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id FROM documents WHERE source = ? LIMIT 1", (source,)
+            ).fetchone()
+            if row is None:
+                return 0
+            doc_id = row["id"]
+            self._conn.execute("DELETE FROM chunks WHERE document_id = ?", (doc_id,))
+            cur = self._conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+            self._conn.commit()
+            return cur.rowcount
+
     def add_fact(
         self,
         subject: str,
@@ -263,15 +356,22 @@ class KnowledgeStore:
         tenant: str = "default",
         sensitivity_max: str = "restricted",
         limit: int = 100,
+        doc_types: Optional[List[str]] = None,
     ) -> List[KnowledgeRecord]:
         levels = ["public", "internal", "confidential", "restricted"]
         max_idx = levels.index(sensitivity_max) if sensitivity_max in levels else len(levels) - 1
         allowed = levels[: max_idx + 1]
         placeholders = ",".join("?" * len(allowed))
+        params: List[Any] = [tenant, *allowed]
+        type_clause = ""
+        if doc_types:
+            type_placeholders = ",".join("?" * len(doc_types))
+            type_clause = f" AND doc_type IN ({type_placeholders})"
+            params.extend(doc_types)
         rows = self._conn.execute(
             f"SELECT * FROM documents WHERE tenant = ? AND sensitivity IN ({placeholders}) "
-            f"AND status = 'active' ORDER BY updated_at DESC LIMIT ?",
-            [tenant, *allowed, limit],
+            f"AND status = 'active'{type_clause} ORDER BY updated_at DESC LIMIT ?",
+            [*params, limit],
         ).fetchall()
         return [self._row_to_record(r) for r in rows]
 
@@ -284,18 +384,31 @@ class KnowledgeStore:
         keyword_weight: float = 0.4,
         vector_weight: float = 0.6,
         min_score: float = 0.25,
+        doc_types: Optional[List[str]] = None,
     ) -> List[RetrievalResult]:
-        """Hybrid retrieval: keyword (BM25-style) + dense vector cosine."""
+        """Hybrid retrieval: keyword (BM25-style) + dense vector cosine.
+
+        ``doc_types`` optionally restricts results to a set of document
+        types (used by the RAG service to apply the same per-portal
+        document-type scope as the portal document lists).
+        """
         levels = ["public", "internal", "confidential", "restricted"]
         max_idx = levels.index(sensitivity_max) if sensitivity_max in levels else len(levels) - 1
         allowed = levels[: max_idx + 1]
         placeholders = ",".join("?" * len(allowed))
+        params: List[Any] = [tenant, *allowed]
+        type_clause = ""
+        if doc_types:
+            type_placeholders = ",".join("?" * len(doc_types))
+            type_clause = f" AND d.doc_type IN ({type_placeholders})"
+            params.extend(doc_types)
 
         rows = self._conn.execute(
             f"SELECT d.*, c.content AS chunk_content, c.embedding FROM documents d "
             f"JOIN chunks c ON c.document_id = d.id "
-            f"WHERE d.tenant = ? AND d.sensitivity IN ({placeholders}) AND d.status = 'active'",
-            [tenant, *allowed],
+            f"WHERE d.tenant = ? AND d.sensitivity IN ({placeholders}) "
+            f"AND d.status = 'active'{type_clause}",
+            params,
         ).fetchall()
 
         if not rows:

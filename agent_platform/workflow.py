@@ -96,10 +96,20 @@ ST_REWORK = "rework"
 ST_COMPLETED = "completed"
 ST_REJECTED = "rejected"
 
+# Purchase workflow states (employee offers a property -> client decides ->
+# advocate + auditor connected -> documents prepared -> client signs -> sold)
+ST_PURCHASE_OFFERED = "purchase_offered"
+ST_PURCHASE_DOCUMENTATION = "purchase_documentation"
+ST_PURCHASE_SIGNING = "purchase_signing"
+ST_PURCHASE_COMPLETED = "purchase_completed"
+ST_PURCHASE_DECLINED = "purchase_declined"
+
 VALID_STATES = {
     ST_PENDING_APPROVAL, ST_ASSIGNED, ST_IN_PROGRESS,
     ST_WAITING_INPUT, ST_REVIEW_PENDING, ST_REWORK,
     ST_COMPLETED, ST_REJECTED,
+    ST_PURCHASE_OFFERED, ST_PURCHASE_DOCUMENTATION, ST_PURCHASE_SIGNING,
+    ST_PURCHASE_COMPLETED, ST_PURCHASE_DECLINED,
 }
 
 # States in which the assigned employee may do work (start / AI / input /
@@ -132,6 +142,9 @@ class WorkflowEngine:
         audit=None,
         bus: Optional[RealtimeBus] = None,
         ai_runner: Optional[Callable[[str, str, Dict[str, Any]], Dict[str, Any]]] = None,
+        stakeholder_resolver: Optional[Callable[[str], str]] = None,
+        properties=None,
+        knowledge=None,
     ) -> None:
         """
         Args:
@@ -141,11 +154,21 @@ class WorkflowEngine:
             ai_runner: optional callable ``ai_runner(username, prompt, state)
                 -> dict`` used by :meth:`run_ai`. The server injects a wrapper
                 around ``platform.handle_request`` so AI work stays governed.
+            stakeholder_resolver: optional callable ``portal -> username``
+                used by the purchase flow to auto-connect the advocate and
+                auditor. Falls back to the demo defaults when absent.
+            properties: optional PropertyStore; a completed purchase marks
+                the property ``sold``.
+            knowledge: optional KnowledgeStore; the sale document package is
+                stored here as ``sale_document`` records.
         """
         self.store_path = store_path
         self.audit = audit
         self.bus = bus or RealtimeBus()
         self.ai_runner = ai_runner
+        self.stakeholder_resolver = stakeholder_resolver
+        self.properties = properties
+        self.knowledge = knowledge
         self._lock = threading.RLock()
         os.makedirs(os.path.dirname(store_path) or ".", exist_ok=True)
         if not os.path.isfile(store_path):
@@ -258,6 +281,353 @@ class WorkflowEngine:
         self._publish("workflow.created", wf, user)
         return wf
 
+    # ---------- purchase workflow (property sale) ----------
+    #
+    # employee offers a property -> client accepts/declines -> advocate +
+    # auditor are connected (auto input requests) -> document package is
+    # prepared -> client signs -> sale completed (property marked sold).
+    #
+    # Reuses the same JSONL store, audit log, real-time bus, and visibility
+    # rules as the request workflow. ``stakeholder_resolver`` (injected by
+    # the server) maps a portal to a concrete username so the advocate and
+    # auditor are auto-connected; it falls back to the demo defaults.
+
+    def _resolve_stakeholder(self, portal: str) -> str:
+        if self.stakeholder_resolver is not None:
+            try:
+                name = self.stakeholder_resolver(portal)
+                if name:
+                    return name
+            except Exception:  # noqa: BLE001
+                pass
+        return {"counsel": "counsel1", "auditor": "auditor1"}.get(portal, portal + "1")
+
+    @staticmethod
+    def _purchase_docs(property_id: str, subject: str, buyer: str,
+                       price_inr: Optional[int], price_display: str,
+                       property_code: str, locality: str, city: str) -> List[Dict[str, str]]:
+        """Build the sale document package for a property purchase.
+
+        Every document is stored as a ``sale_document`` knowledge record
+        (sensitivity confidential) so it is retrievable through the
+        governed RAG path by the parties involved.
+        """
+        price_line = price_display or "as per the agreed terms"
+        return [
+            {
+                "title": f"Sale Agreement — {property_code}",
+                "content": (
+                    f"SALE AGREEMENT for property {property_code} "
+                    f"({locality}, {city}).\n\n"
+                    f"Parties: the Firm (seller) and {buyer} (buyer).\n"
+                    f"Agreed price: {price_line}.\n\n"
+                    f"1. The seller agrees to transfer and the buyer agrees "
+                    f"to purchase the property described above, free of all "
+                    f"encumbrances.\n"
+                    f"2. Payment shall be made as per the Payment Schedule "
+                    f"document accompanying this agreement.\n"
+                    f"3. Transfer of title is subject to the Title "
+                    f"Verification and Compliance Clearance documents.\n"
+                    f"4. Stamp duty and registration charges are payable as "
+                    f"per the Stamp Duty & Registration document.\n\n"
+                    f"Execution: signed by both parties in the presence of "
+                    f"two witnesses."
+                ),
+            },
+            {
+                "title": f"Title Verification — {property_code}",
+                "content": (
+                    f"TITLE VERIFICATION for property {property_code} "
+                    f"({locality}, {city}).\n\n"
+                    f"Prepared by the Advocate (external counsel).\n\n"
+                    f"- Chain of title reviewed; seller's ownership verified.\n"
+                    f"- No active mortgages or liens on record.\n"
+                    f"- No pending litigation affecting title.\n"
+                    f"- Encumbrance certificate clear for the last 30 years.\n\n"
+                    f"Conclusion: title is clear and marketable. "
+                    f"Registration may proceed."
+                ),
+            },
+            {
+                "title": f"Compliance & RERA Clearance — {property_code}",
+                "content": (
+                    f"COMPLIANCE & RERA CLEARANCE for property {property_code} "
+                    f"({locality}, {city}).\n\n"
+                    f"Prepared by the Auditor.\n\n"
+                    f"- RERA registration status: verified and active.\n"
+                    f"- All statutory approvals in place (DTCP / building "
+                    f"plan / occupancy).\n"
+                    f"- No outstanding compliance notices.\n\n"
+                    f"Conclusion: property is compliant for sale and "
+                    f"registration."
+                ),
+            },
+            {
+                "title": f"Stamp Duty & Registration — {property_code}",
+                "content": (
+                    f"STAMP DUTY & REGISTRATION for property {property_code} "
+                    f"({locality}, {city}).\n\n"
+                    f"Agreed price: {price_line}.\n\n"
+                    f"- Applicable stamp duty computed on the agreed price "
+                    f"per the state schedule.\n"
+                    f"- Registration to be filed with the Sub-Registrar's "
+                    f"office within the statutory period.\n"
+                    f"- Registration fee and court fees payable at filing.\n\n"
+                    f"Next step: submit the signed Sale Agreement for "
+                    f"registration."
+                ),
+            },
+            {
+                "title": f"Payment Schedule — {property_code}",
+                "content": (
+                    f"PAYMENT SCHEDULE for property {property_code} "
+                    f"({locality}, {city}).\n\n"
+                    f"Agreed price: {price_line}.\n\n"
+                    f"1. Token / advance: payable on signing.\n"
+                    f"2. Balance: payable on registration, against receipt "
+                    f"and transfer of title documents.\n\n"
+                    f"All payments to be made through traceable bank "
+                    f"transfer to the firm's account."
+                ),
+            },
+        ]
+
+    def propose_purchase(self, user: str, portal: str, property_id: str,
+                         buyer: str, note: str = "") -> Dict[str, Any]:
+        """Employee offers a property to a client: 'will you buy?'
+
+        The property details + price are attached, the buyer is named, and
+        the workflow enters ``purchase_offered`` awaiting the client's
+        decision.
+        """
+        if portal not in WORKER_PORTALS:
+            raise PermissionError(f"Portal '{portal}' cannot propose a purchase.")
+        if self.properties is None:
+            raise RuntimeError("property store is not configured")
+        prop = self.properties.get_property(property_id)
+        if prop is None:
+            raise KeyError(f"property not found: {property_id}")
+        if prop.get("status") == "sold":
+            raise ValueError(f"property {property_id} is already sold")
+        if not buyer:
+            raise ValueError("a buyer (client) is required")
+
+        wf_id = "wf_" + uuid.uuid4().hex[:12]
+        subject = f"Purchase offer: {prop.get('property_code', property_id)}"
+        message = (
+            f"Property {prop.get('property_code', property_id)} — "
+            f"{prop.get('title', '')}, {prop.get('locality', '')}, "
+            f"{prop.get('city', '')}. Asking price: "
+            f"{prop.get('price_display', '—')}. "
+            f"Will you buy?"
+        )
+        wf: Dict[str, Any] = {
+            "id": wf_id,
+            "subject": subject,
+            "message": message,
+            "matter": None,
+            "tenant": "default",
+            "created_by": user,
+            "created_by_portal": portal,
+            "status": ST_PURCHASE_OFFERED,
+            "assigned_to": user,
+            "assigned_by": user,
+            "assigned_at": _now(),
+            "review_submitted_at": None,
+            "review_submitted_by": None,
+            "final_approved_at": None,
+            "final_approved_by": None,
+            "final_response": None,
+            "completed_at": None,
+            "inputs": [],
+            "activity": [],
+            "created_at": _now(),
+            "updated_at": _now(),
+            "purchase": {
+                "property_id": property_id,
+                "property_code": prop.get("property_code"),
+                "title": prop.get("title"),
+                "locality": prop.get("locality"),
+                "city": prop.get("city"),
+                "price_inr": prop.get("price_inr"),
+                "price_display": prop.get("price_display"),
+                "buyer": buyer,
+                "offer_note": note,
+                "documents": [],
+                "signed": False,
+                "signed_at": None,
+            },
+        }
+        self._log(wf, user, "purchase_offered",
+                  f"Offered {prop.get('property_code', property_id)} to "
+                  f"{buyer} at {prop.get('price_display', '—')}. Will you buy?")
+        with self._lock:
+            self._workflows[wf_id] = wf
+            self._save()
+        self._audit(f"user:{user}", "purchase_offered", wf_id,
+                    {"property_id": property_id, "buyer": buyer})
+        self._publish("workflow.purchase_offered", wf, user,
+                      {"property_id": property_id, "buyer": buyer})
+        return wf
+
+    def accept_purchase(self, user: str, portal: str, wf_id: str,
+                        note: str = "") -> Dict[str, Any]:
+        """The client says 'yes, I will buy'. The advocate and auditor are
+        connected (auto input requests) and the sale document package is
+        prepared. The workflow moves to ``purchase_documentation``."""
+        wf = self._require(wf_id)
+        purchase = wf.get("purchase")
+        if not purchase:
+            raise ValueError("workflow is not a purchase")
+        if wf["status"] != ST_PURCHASE_OFFERED:
+            raise ValueError(
+                f"purchase is {wf['status']}, not offered")
+        if portal != "client" or purchase.get("buyer") != user:
+            raise PermissionError(
+                "Only the buyer (client) can accept a purchase offer")
+
+        # Connect the advocate and the auditor.
+        advocate = self._resolve_stakeholder("counsel")
+        auditor = self._resolve_stakeholder("auditor")
+        prop_code = purchase.get("property_code", purchase.get("property_id"))
+        self._add_purchase_input(wf, "counsel", advocate,
+            f"Title verification & sale agreement for {prop_code}. Please "
+            f"confirm the title is clear and prepare the Sale Agreement.")
+        self._add_purchase_input(wf, "auditor", auditor,
+            f"Compliance & RERA clearance for {prop_code}. Please confirm "
+            f"the property is compliant for sale and registration.")
+
+        # Prepare the document package (stored as sale_document records).
+        docs = self._purchase_docs(
+            purchase.get("property_id"), wf.get("subject") or "",
+            user, purchase.get("price_inr"),
+            purchase.get("price_display"), prop_code,
+            purchase.get("locality", ""), purchase.get("city", ""))
+        doc_ids = []
+        if self.knowledge is not None:
+            for d in docs:
+                doc_id, _ = self.knowledge.upsert_document(
+                    title=d["title"], content=d["content"],
+                    source=f"purchase:{wf_id}:{d['title']}",
+                    doc_type="sale_document", sensitivity="confidential",
+                    tenant="default",
+                    metadata={"workflow_id": wf_id,
+                              "property_id": purchase.get("property_id"),
+                              "buyer": user})
+                doc_ids.append(doc_id)
+        purchase["documents"] = [
+            {"title": d["title"], "doc_id": doc_ids[i]}
+            for i, d in enumerate(docs)
+        ]
+
+        wf["status"] = ST_PURCHASE_DOCUMENTATION
+        self._log(wf, user, "purchase_accepted",
+                  f"{user} accepted the purchase. Advocate ({advocate}) and "
+                  f"auditor ({auditor}) connected; {len(docs)} sale documents "
+                  f"prepared.")
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "purchase_accepted", wf_id,
+                    {"advocate": advocate, "auditor": auditor,
+                     "documents": len(docs)})
+        self._publish("workflow.purchase_accepted", wf, user,
+                      {"advocate": advocate, "auditor": auditor,
+                       "documents": purchase["documents"]})
+        return wf
+
+    def decline_purchase(self, user: str, portal: str, wf_id: str,
+                         note: str = "") -> Dict[str, Any]:
+        """The client says 'no'. The workflow closes as declined."""
+        wf = self._require(wf_id)
+        purchase = wf.get("purchase")
+        if not purchase:
+            raise ValueError("workflow is not a purchase")
+        if wf["status"] != ST_PURCHASE_OFFERED:
+            raise ValueError(
+                f"purchase is {wf['status']}, not offered")
+        if portal != "client" or purchase.get("buyer") != user:
+            raise PermissionError(
+                "Only the buyer (client) can decline a purchase offer")
+        wf["status"] = ST_PURCHASE_DECLINED
+        wf["completed_at"] = _now()
+        self._log(wf, user, "purchase_declined",
+                  f"{user} declined the purchase"
+                  + (f" — {note}" if note else ""))
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "purchase_declined", wf_id,
+                    {"note": note})
+        self._publish("workflow.purchase_declined", wf, user, {"note": note})
+        return wf
+
+    def sign_purchase(self, user: str, portal: str, wf_id: str,
+                      note: str = "") -> Dict[str, Any]:
+        """The client signs the sale documents. The sale completes and the
+        property is marked ``sold``."""
+        wf = self._require(wf_id)
+        purchase = wf.get("purchase")
+        if not purchase:
+            raise ValueError("workflow is not a purchase")
+        if wf["status"] not in (ST_PURCHASE_DOCUMENTATION,
+                                ST_PURCHASE_SIGNING):
+            raise ValueError(
+                f"purchase is {wf['status']}, not ready for signing")
+        if portal != "client" or purchase.get("buyer") != user:
+            raise PermissionError(
+                "Only the buyer (client) can sign the purchase documents")
+        purchase["signed"] = True
+        purchase["signed_at"] = _now()
+        wf["status"] = ST_PURCHASE_COMPLETED
+        wf["completed_at"] = _now()
+        wf["final_response"] = (
+            f"Sale of {purchase.get('property_code', 'property')} completed. "
+            f"Documents signed by {user}.")
+
+        # Mark the property sold (best-effort; the workflow still completes
+        # if the property store is unavailable).
+        if self.properties is not None:
+            try:
+                self.properties.update_status(
+                    purchase.get("property_id"), "sold", actor=user)
+            except Exception:  # noqa: BLE001
+                pass
+
+        self._log(wf, user, "purchase_signed",
+                  f"{user} signed the sale documents. Sale completed.")
+        with self._lock:
+            self._save()
+        self._audit(f"user:{user}", "purchase_signed", wf_id,
+                    {"property_id": purchase.get("property_id")})
+        self._publish("workflow.purchase_completed", wf, user,
+                      {"property_id": purchase.get("property_id"),
+                       "final_response": wf["final_response"]})
+        return wf
+
+    def _add_purchase_input(self, wf: Dict[str, Any], to_portal: str,
+                            to_user: str, question: str) -> None:
+        """Add an input request to a purchase workflow (advocate/auditor).
+        Purchase workflows are not 'workable' in the classic sense, so this
+        bypasses the worker guard used by request_input."""
+        inp_id = "inp_" + uuid.uuid4().hex[:10]
+        inp = {
+            "id": inp_id,
+            "workflow_id": wf["id"],
+            "from_user": wf.get("created_by"),
+            "to_user": to_user,
+            "to_portal": to_portal,
+            "question": question,
+            "status": "pending",
+            "answer": None,
+            "created_at": _now(),
+            "answered_at": None,
+        }
+        wf.setdefault("inputs", []).append(inp)
+        self._log(wf, wf.get("created_by"), "input_requested",
+                  f"Connected {to_user} ({to_portal}): {question}")
+        self._publish("workflow.input_requested", wf, wf.get("created_by"),
+                      {"input_id": inp_id, "to_user": to_user,
+                       "to_portal": to_portal, "question": question})
+
     # ---------- listing / reading ----------
 
     def list_workflows(self, user: str, portal: str) -> List[Dict[str, Any]]:
@@ -291,6 +661,13 @@ class WorkflowEngine:
             return True
         # The creator always sees their own request (user-level, not portal-level).
         if wf.get("created_by") == user:
+            return True
+        # Purchase workflows: the buyer (client) is a first-class participant
+        # and sees the offer, documents and signing even though they did not
+        # create the workflow.
+        purchase = wf.get("purchase")
+        if purchase and portal == "client" \
+                and purchase.get("buyer") == user:
             return True
         if portal == "employee":
             return wf.get("assigned_to") == user

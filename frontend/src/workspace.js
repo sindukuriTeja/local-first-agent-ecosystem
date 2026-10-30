@@ -224,6 +224,9 @@ async function loadPortalData() {
   try {
     portalData = await api.portal()
     renderActiveWorkspace(contentArea)
+    // Inject the governed RAG search panel (all roles) — the
+    // "ask the documentation" surface, scoped to this user.
+    injectRagPanel()
     // Inject the real-time collaboration workflow panel (all roles).
     injectWorkflowPanel()
     // Subscribe to the live event stream; re-render the panel on each event.
@@ -255,6 +258,142 @@ function injectWorkflowPanel() {
   // Prepend so it's the first thing each role sees.
   contentArea.insertBefore(holder.firstElementChild, contentArea.firstChild)
   bindWorkflowEvents(activeRoleKey)
+}
+
+/* =============================================================
+   RAG — governed documentation search (all roles)
+   Every portal can ask the firm's documentation store; results are
+   scoped to what this user may read (sensitivity + doc-type +
+   matter/client/parcel). Property inventory is included via the
+   mirrored property documents.
+   ============================================================= */
+function injectRagPanel() {
+  const contentArea = document.getElementById('workspace-content')
+  if (!contentArea || !portalData) return
+  const rag = portalData.rag || { available: false }
+  if (!rag.available) return
+  const holder = document.createElement('div')
+  holder.innerHTML = renderRagPanel(rag)
+  // Prepend so the search is the first thing each role sees.
+  contentArea.insertBefore(holder.firstElementChild, contentArea.firstChild)
+  bindRagEvents(rag)
+}
+
+function renderRagPanel(rag) {
+  const chips = (rag.suggested_queries || []).slice(0, 4)
+  return `
+    <div class="rag-panel glass-card card-pad-lg">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="icon-tile icon-tile-44" style="--role: var(--a1);">${icons.search}</span>
+          <div>
+            <h3 style="font-size:17px; margin:0;">Documentation Search</h3>
+            <p class="caption" style="margin:2px 0 0;">Ask the firm's knowledge base — scoped to your access.</p>
+          </div>
+        </div>
+        <span class="badge badge-role" style="font-size:11px;">Governed RAG</span>
+      </div>
+      ${chips.length ? `<div class="ai-chips-row" style="margin-bottom:12px;">
+        ${chips.map((c) => `<button type="button" class="ai-chip rag-chip">${esc(c)}</button>`).join('')}
+      </div>` : ''}
+      <div style="display:flex; gap:10px;">
+        <input id="rag-input" class="form-input" type="text"
+               placeholder="Search documents, cases, statutes, properties…" />
+        <button type="button" id="rag-search-btn" class="btn btn-primary"><span>Search</span></button>
+        <button type="button" id="rag-ask-btn" class="btn btn-ghost"><span>Ask</span></button>
+      </div>
+      <div id="rag-results" style="margin-top:16px;"></div>
+    </div>
+  `
+}
+
+function renderRagResults(res) {
+  const items = res.results || []
+  if (!items.length) {
+    return `<div class="text-small" style="color:var(--mu); padding:8px 0;">
+      No documents matched in your accessible scope.</div>`
+  }
+  return items.map((r) => `
+    <div style="border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+        <div style="min-width:0;">
+          <div style="font-weight:600; font-size:14px;">${esc(r.title || r.source)}</div>
+          <div style="margin-top:6px; font-size:13px; color:var(--mu); line-height:1.5;">${esc(r.excerpt || '')}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
+          ${renderSensBadge(r.sensitivity)}
+          <span class="badge badge-role" style="font-size:10px;">${esc(r.doc_type || '')}</span>
+        </div>
+      </div>
+      <div style="margin-top:8px; font-size:11.5px; color:var(--mu);">
+        source: <code>${esc(r.source)}</code> · match ${(r.score * 100).toFixed(0)}%
+      </div>
+    </div>
+  `).join('')
+}
+
+function renderRagAsk(res) {
+  const srcs = res.sources || []
+  const cite = srcs.length
+    ? `<div style="margin-top:10px; font-size:12px; color:var(--mu);">
+         Cited: ${srcs.map((s) => `<code>${esc(s.source)}</code>`).join(', ')}
+       </div>`
+    : ''
+  return `
+    <div style="border-left:3px solid var(--a1); background:var(--panel2, rgba(255,255,255,.03));
+                border-radius:0 12px 12px 0; padding:14px 16px;">
+      <div style="font-size:14px; line-height:1.6; white-space:pre-wrap;">${esc(res.answer || '')}</div>
+      ${cite}
+    </div>
+  `
+}
+
+async function runRagSearch() {
+  const input = document.getElementById('rag-input')
+  const results = document.getElementById('rag-results')
+  if (!input || !results) return
+  const q = input.value.trim()
+  if (!q) return
+  results.innerHTML = `<div class="caption" style="color:var(--mu);">Searching…</div>`
+  try {
+    const res = await api.ragSearch(q)
+    results.innerHTML = renderRagResults(res)
+  } catch (err) {
+    results.innerHTML = `<div class="text-small" style="color:var(--status-error-fg);">${esc(err.message)}</div>`
+  }
+}
+
+async function runRagAsk() {
+  const input = document.getElementById('rag-input')
+  const results = document.getElementById('rag-results')
+  if (!input || !results) return
+  const q = input.value.trim()
+  if (!q) return
+  results.innerHTML = `<div class="caption" style="color:var(--mu);">
+    Composing a grounded answer from your documents…</div>`
+  try {
+    const res = await api.ragAsk(q)
+    results.innerHTML = renderRagAsk(res)
+  } catch (err) {
+    results.innerHTML = `<div class="text-small" style="color:var(--status-error-fg);">${esc(err.message)}</div>`
+  }
+}
+
+function bindRagEvents() {
+  const input = document.getElementById('rag-input')
+  const searchBtn = document.getElementById('rag-search-btn')
+  const askBtn = document.getElementById('rag-ask-btn')
+  if (searchBtn) searchBtn.addEventListener('click', runRagSearch)
+  if (askBtn) askBtn.addEventListener('click', runRagAsk)
+  if (input) input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') runRagSearch()
+  })
+  document.querySelectorAll('.rag-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (input) input.value = chip.textContent
+      runRagSearch()
+    })
+  })
 }
 
 // Route to role-specific workspace layout
@@ -304,6 +443,7 @@ function renderEmployeeWorkspace(container) {
   const judgments = legalWork.filter((d) => d.doc_type !== 'statute')
   const allDocs = portalData.documents || []
   const propertyBlock = portalData.properties || { available: false }
+  const purchaseWfs = (portalData.purchase && portalData.purchase.workflows) || []
 
   container.innerHTML = `
     <!-- Hero: Gradient-border AI Task Box -->
@@ -311,6 +451,9 @@ function renderEmployeeWorkspace(container) {
 
     <!-- Property Database (real-estate) -->
     ${propertyBlock.available ? renderPropertySection(propertyBlock) : ''}
+
+    <!-- Purchase / sale pipeline -->
+    ${renderPurchaseSection(purchaseWfs, { audience: 'employee' })}
 
     <!-- 4 Stat Cards with Tickers -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
@@ -388,6 +531,7 @@ function renderEmployeeWorkspace(container) {
   bindAiTaskEvents()
   bindLegalTabs(statutes, judgments)
   if (propertyBlock.available) bindPropertyEvents(propertyBlock)
+  bindPurchaseEvents(purchaseWfs, { audience: 'employee' })
   initTickersInContainer(container)
 }
 
@@ -555,6 +699,7 @@ function renderAdvocateWorkspace(container) {
   const draftsToReview = portalData.drafts_to_review || portalData.drafts || []
   const sharedDocs = portalData.documents || []
   const research = portalData.research || []
+  const purchaseWfs = (portalData.purchase && portalData.purchase.workflows) || []
 
   container.innerHTML = `
     <!-- Top Row: Matters card list (hero) + Drafts to review panel -->
@@ -601,6 +746,9 @@ function renderAdvocateWorkspace(container) {
     <!-- AI Assistant Task Box -->
     ${renderAiTaskBox(portalData.ai_tasks || [])}
 
+    <!-- Sale workflows I am connected to (advocate) -->
+    ${renderPurchaseSection(purchaseWfs, { audience: 'counsel' })}
+
     <!-- Below: Shared Documents & Research -->
     <div class="glass-card card-pad-lg" id="sec-documents">
       <h3 style="margin-bottom: 16px;">Shared Counsel Documents</h3>
@@ -628,6 +776,7 @@ function renderClientWorkspace(container) {
   const reports = portalData.reports || []
   const requests = portalData.my_requests || []
   const clientPropBlock = portalData.properties || { available: false }
+  const purchaseWfs = (portalData.purchase && portalData.purchase.workflows) || []
 
   container.innerHTML = `
     <!-- Hero: 5-Step Progress Tracker -->
@@ -700,6 +849,9 @@ function renderClientWorkspace(container) {
 
     <!-- Properties shared with me (sent by an employee) -->
     ${clientPropBlock.available ? renderClientPropertySection(clientPropBlock) : ''}
+
+    <!-- Property offers (purchase workflow) -->
+    ${renderPurchaseSection(purchaseWfs, { audience: 'client' })}
 
     <!-- Interactive Request & Upload Forms -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
@@ -1275,6 +1427,31 @@ function renderPropertySection(block) {
         </form>
       </div>
     </div>
+
+    <!-- Propose-sale modal (starts the purchase workflow) -->
+    <div id="prop-propose-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <h3 style="font-size:18px; font-weight:700; margin-bottom:6px;">Propose a sale</h3>
+        <p class="caption" id="prop-propose-sub" style="margin-bottom:18px;">
+          Sends the property + asking price to the client and asks them: <b>will you buy?</b>
+          On acceptance, counsel and auditor are connected and the sale documents are prepared for the client's signature.
+        </p>
+        <form id="prop-propose-form">
+          <div class="form-group">
+            <label class="form-label" for="prop-propose-buyer">Client (buyer)</label>
+            <input id="prop-propose-buyer" class="form-input" placeholder="e.g. client1" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prop-propose-note">Note (optional)</label>
+            <textarea id="prop-propose-note" class="form-textarea" placeholder="Add a short note for the client…"></textarea>
+          </div>
+          <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+            <button type="button" class="btn btn-ghost" id="prop-propose-cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary"><span>Propose sale</span> ${icons.send}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   `
 }
 
@@ -1283,6 +1460,9 @@ function renderPropActions(p) {
   return `
     <button type="button" class="btn btn-primary btn-sm prop-share-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" ${canAct ? '' : 'disabled'}>
       ${icons.send} Send to Client / Mgmt
+    </button>
+    <button type="button" class="btn btn-ghost btn-sm prop-propose-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" ${canAct ? '' : 'disabled'}>
+      Propose sale
     </button>
     <button type="button" class="btn btn-ghost btn-sm prop-price-btn" data-id="${esc(p.id)}" data-title="${esc(p.title)}" data-current="${esc(p.price_inr)}" ${canAct ? '' : 'disabled'}>
       Request price change
@@ -1344,6 +1524,17 @@ function bindPropertyEvents(block) {
         openModal('prop-price-modal')
       })
     })
+    document.querySelectorAll('.prop-propose-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id')
+        const title = btn.getAttribute('data-title')
+        document.getElementById('prop-propose-sub').textContent = title
+        document.getElementById('prop-propose-form').dataset.pid = id
+        document.getElementById('prop-propose-buyer').value = ''
+        document.getElementById('prop-propose-note').value = ''
+        openModal('prop-propose-modal')
+      })
+    })
   }
   bindPropCardButtons()
 
@@ -1384,6 +1575,156 @@ function bindPropertyEvents(block) {
     } catch (err) {
       showToast({ title: 'Request Failed', message: err.message, type: 'error' })
     }
+  })
+
+  // ---- propose-sale modal (purchase workflow) ----
+  document.getElementById('prop-propose-cancel').addEventListener('click', () => closeModal('prop-propose-modal'))
+  document.getElementById('prop-propose-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const pid = e.target.dataset.pid
+    const buyer = document.getElementById('prop-propose-buyer').value.trim()
+    const note = document.getElementById('prop-propose-note').value.trim()
+    if (!buyer) {
+      showToast({ title: 'Buyer Required', message: 'Enter the client (buyer) username.', type: 'error' })
+      return
+    }
+    try {
+      await api.purchasePropose(pid, buyer, note)
+      showToast({ title: 'Sale Proposed', message: `Offer sent to ${buyer}. The client will be asked whether they want to buy.`, type: 'success' })
+      closeModal('prop-propose-modal')
+      e.target.reset()
+      setTimeout(loadPortalData, 1200)
+    } catch (err) {
+      showToast({ title: 'Proposal Failed', message: err.message, type: 'error' })
+    }
+  })
+}
+
+/* =============================================================
+   Purchase Workflow (property sale) — render + bind helpers
+   ============================================================= */
+function purchaseStatusBadge(status) {
+  const map = {
+    purchase_offered: ['badge-warning', 'Offer sent — awaiting client'],
+    purchase_documentation: ['badge-info', 'Documents prepared'],
+    purchase_signing: ['badge-warning', 'Awaiting signature'],
+    purchase_completed: ['badge-success', 'Sale completed'],
+    purchase_declined: ['badge-error', 'Declined'],
+  }
+  const [cls, label] = map[status] || ['badge-info', (status || 'unknown').replace('_', ' ')]
+  return `<span class="badge ${cls}"><span class="dot"></span>${label}</span>`
+}
+
+function purchaseDocRow(d) {
+  return `
+    <tr>
+      <td><span class="badge badge-role">${esc(d.kind || 'doc')}</span></td>
+      <td>${esc(d.title)}</td>
+      <td class="caption">${esc(d.status || 'drafted')}</td>
+    </tr>`
+}
+
+function renderPurchaseSection(wfs, { audience = 'employee' } = {}) {
+  const rows = (wfs || []).map((w) => {
+    const docs = (w.documents || []).map(purchaseDocRow).join('')
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:600;">${esc(w.title || w.id)}</div>
+          <div class="caption">${esc(w.property_code || '')} · buyer: ${esc(w.buyer || '—')}${w.advocate ? ' · counsel: ' + esc(w.advocate) : ''}${w.auditor ? ' · auditor: ' + esc(w.auditor) : ''}</div>
+        </td>
+        <td>${w.price_display ? `<span style="font-weight:700;">${esc(w.price_display)}</span>` : '—'}</td>
+        <td>${purchaseStatusBadge(w.status)}</td>
+        <td>
+          ${docs ? `<details class="caption"><summary>${(w.documents || []).length} document(s)</summary>
+            <table class="data-table" style="margin-top:6px;">
+              <thead><tr><th>Kind</th><th>Title</th><th>Status</th></tr></thead>
+              <tbody>${docs}</tbody>
+            </table></details>` : '<span class="caption">—</span>'}
+        </td>
+        ${audience === 'client' ? `
+        <td>
+          ${w.status === 'offered' ? `
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-primary btn-sm purchase-accept-btn" data-id="${esc(w.id)}">Accept offer</button>
+              <button type="button" class="btn btn-ghost btn-sm purchase-decline-btn" data-id="${esc(w.id)}">Decline</button>
+            </div>` : ''}
+          ${w.status === 'awaiting_signature' ? `
+            <button type="button" class="btn btn-primary btn-sm purchase-sign-btn" data-id="${esc(w.id)}">Sign &amp; complete</button>` : ''}
+          ${w.status === 'completed' ? `<span class="badge badge-success"><span class="dot"></span>Sale completed</span>` : ''}
+          ${w.status === 'declined' ? `<span class="caption">Declined by client</span>` : ''}
+        </td>` : ''}
+      </tr>`
+  }).join('')
+  const head = audience === 'client' ? '<th>Decision</th>' : ''
+  return `
+    <div class="glass-card card-pad-lg" id="sec-purchase">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="icon-tile icon-tile-44" style="--role: var(--role);">${icons.briefcase}</span>
+          <div>
+            <h3 style="margin-bottom:2px;">${audience === 'client' ? 'Property Offers' : 'Sale Pipeline'}</h3>
+            <p class="caption">${audience === 'client'
+              ? 'Offers made to you. Accepting connects your advocate and auditor, prepares the sale documents, and asks you to sign.'
+              : 'Live sale workflows: offer → client decision → counsel & auditor preparation → client signature.'}</p>
+          </div>
+        </div>
+        <span class="badge badge-role"><span class="dot"></span>${(wfs || []).length} active</span>
+      </div>
+      ${(wfs || []).length ? `
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>Property / parties</th><th>Price</th><th>Status</th><th>Documents</th>${head}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>` : renderEmptyState('No sale workflows', audience === 'client'
+          ? 'No property offers have been made to you yet.'
+          : 'Propose a sale from the Property Database to start a workflow.')}
+    </div>
+  `
+}
+
+function bindPurchaseEvents(wfs, { audience = 'employee' } = {}) {
+  document.querySelectorAll('.purchase-accept-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true
+      try {
+        const res = await api.purchaseDecision(btn.dataset.id, 'accept')
+        showToast({ title: 'Offer Accepted', message: 'Counsel and auditor are connected; sale documents are being prepared.', type: 'success' })
+        setTimeout(loadPortalData, 1200)
+      } catch (err) {
+        showToast({ title: 'Decision Failed', message: err.message, type: 'error' })
+        btn.disabled = false
+      }
+    })
+  })
+  document.querySelectorAll('.purchase-decline-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Decline this property offer?')) return
+      btn.disabled = true
+      try {
+        await api.purchaseDecision(btn.dataset.id, 'decline')
+        showToast({ title: 'Offer Declined', message: 'The sale workflow has been closed.', type: 'success' })
+        setTimeout(loadPortalData, 1200)
+      } catch (err) {
+        showToast({ title: 'Decision Failed', message: err.message, type: 'error' })
+        btn.disabled = false
+      }
+    })
+  })
+  document.querySelectorAll('.purchase-sign-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Sign the sale documents and complete the purchase?')) return
+      btn.disabled = true
+      try {
+        await api.purchaseSign(btn.dataset.id)
+        showToast({ title: 'Purchase Completed', message: 'Sale documents signed; the property is now marked as sold.', type: 'success' })
+        setTimeout(loadPortalData, 1200)
+      } catch (err) {
+        showToast({ title: 'Signature Failed', message: err.message, type: 'error' })
+        btn.disabled = false
+      }
+    })
   })
 }
 

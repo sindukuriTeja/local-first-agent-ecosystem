@@ -65,6 +65,7 @@ explains how it fits the larger **Self-Learning, Local-First Agent Ecosystem**.
 | 15. Reporting & Analytics Agent | `agents/agent_15_reporting.py` | Verified/labelled data only; report artifacts in `data/build_docs/`; external sharing → `external_share` approval; message → Agent 16. |
 | 16. Voice Notification Agent | `agents/agent_16_voice_notification.py` | Gates: approved message → role → calling hours → consent → identity check → call (simulated) → call log back to Agent 8. |
 | Stored knowledge + source records + extracted fields + matter records | `core/knowledge.py` (SQLite: `documents`, `chunks`, `facts`, `entities`, `relations`) | Sensitivity + tenant scoped. |
+| Governed RAG (documentation search + grounded answer) | `core/rag.py` (`RAGService`, `doc_in_scope`, property mirror) | Single scoped retrieval path for every portal role; mirrors the property inventory into the store. |
 | Official/permitted public sources | `config/settings.yaml → policy.permitted_external_sources` | Egress allowlist. |
 | Authorized human reviewer | `core/approval.py` + `POST /approvals/decide` / `cli approve` | Role-restricted (`approver_roles`). |
 | Audit log | `core/audit.py` (`data/audit_log.jsonl`) | Append-only; who/what/when/sources/result. |
@@ -295,3 +296,133 @@ realistic legal/compliance corpus: statutes, judgments, tax notices, land
 parcels, debt facilities, matters, entities, external docs, and a Q&A
 **exam set**. The documents seed the knowledge store (`seed_dataset`) and
 the exam set gates the learning engine (`learning.exam_path`).
+
+## 12. Governed RAG — documentation search for every role
+
+`core/rag.py` is the single "ask the documentation" path. It exists so
+that an **internal employee**, an **auditor**, and an **advocate** (and
+every other portal role) can retrieve information *from the stored
+documentation* through one governed surface, instead of each portal
+re-implementing retrieval.
+
+### 12.1 Scope — one rule, applied everywhere
+
+`doc_in_scope(user, doc)` is the single source of truth for
+matter/client/parcel scoping. It is used by **both** the portal document
+lists (`portal.PortalService._in_scope`) and the RAG search, so a
+document a user can see in their list is exactly the document they can
+retrieve. The full scope applied to every RAG query is:
+
+* **sensitivity ceiling** — role → max level (`core/policy.py` ladder),
+  enforced at the SQL level in `KnowledgeStore.search`.
+* **document-type filter** — e.g. the auditor only sees
+  `compliance`/`audit`/`case_analysis`/`tax` (`PORTAL_DOC_TYPES`),
+  enforced at the SQL level.
+* **tenant isolation** — per-tenant.
+* **assignment scope** — matter/client/parcel via `doc_in_scope`.
+
+This closes the previous scope leak: the document *list* was scoped by
+assignment but the raw *search* was not; now both apply the same rule.
+
+### 12.2 Grounded answer
+
+`RAGService.answer` retrieves scoped chunks, then either (a) asks the
+local model to answer from that evidence with citations, or (b) when the
+local model is offline, returns the best-matching evidence verbatim
+(`model=False`). The answer is always `grounded` only when evidence was
+found, and always carries its cited sources. This mirrors the
+`GroundedAnswerer` pattern used by the learning engine, so the RAG path
+and the eval path stay consistent.
+
+### 12.3 Property inventory mirror
+
+The real-estate inventory (`core/property_db.py`, `data/properties.db`)
+remains the source of truth for price/share/approval actions. On
+platform startup (and on demand via `platform.sync_properties()`) it is
+**mirrored** into the knowledge store as `doc_type='property'` documents
+(`source='property:<code>'`, `sensitivity='internal'`), upserted by
+source so re-syncs never duplicate. Property questions are therefore
+answered through the same governed RAG path as every other document,
+with citations.
+
+### 12.4 API + UI
+
+* `GET  /api/rag` — availability + suggested queries (any authenticated user).
+* `POST /api/rag/search` — scoped document search (any authenticated user).
+* `POST /api/rag/ask` — grounded, scoped answer (any authenticated user).
+
+These are available to **every** portal role (previously the only search
+endpoint, `GET /search`, was restricted to approver roles). The frontend
+renders a "Documentation Search" panel at the top of every portal
+workspace (search + ask, with suggested-query chips and cited results).
+
+## 13. Purchase workflow — property sale lifecycle
+
+A governed end-to-end sale: the employee shows a property (with its
+asking price) and asks the client *"will you buy?"*; on acceptance the
+advocate (counsel) and the auditor are connected and the full sale
+document package is prepared; the client signs to complete the buy and
+the property is marked sold.
+
+### 13.1 Lifecycle
+
+```
+propose_purchase (employee)          accept_purchase (buyer client)
+  status: purchase_offered  ──────►  status: purchase_documentation
+  "Will you buy?"                        ├─ advocate + auditor connected
+                                         │   (auto input requests)
+                                         └─ 5 sale documents prepared
+                                              (sale_document records)
+  decline_purchase (buyer client)      sign_purchase (buyer client)
+  status: purchase_declined            status: purchase_completed
+                                       property → "sold" in properties.db
+```
+
+* **Propose** — `WorkflowEngine.propose_purchase` (employee or counsel
+  portal only). Attaches the live property snapshot (code, title,
+  locality, city, price) from `core/property_db.py` and names the buyer.
+  Sold properties cannot be re-offered.
+* **Accept** — buyer (the named client) only. The engine resolves the
+  advocate and auditor from the auth directory (first enabled user per
+  portal, via `stakeholder_resolver`) and files input requests to both:
+  title verification & sale agreement (advocate), compliance & RERA
+  clearance (auditor). It then prepares the document package — Sale
+  Agreement, Title Verification, Compliance & RERA Clearance, Stamp Duty
+  & Registration, Payment Schedule — stored as `doc_type='sale_document'`
+  knowledge records (sensitivity `confidential`), so the parties can
+  retrieve them through the governed RAG path (§12).
+* **Decline** — buyer only; closes the workflow as declined.
+* **Sign** — buyer only, once documents are prepared. Marks the workflow
+  completed and flips the property to `sold` in the property store
+  (best-effort: the sale still completes if the store is unavailable).
+
+Every transition is activity-logged, audit-logged, and published on the
+realtime bus (`workflow.purchase_offered` / `purchase_accepted` /
+`purchase_declined` / `purchase_completed`), so all connected portals
+update live.
+
+### 13.2 Visibility
+
+`WorkflowEngine._visible_to` treats the buyer as a first-class
+participant: a purchase workflow is visible to its creator, to the named
+buyer (client portal), and to any stakeholder with an input request
+addressed to them (advocate/auditor). Management and admin see all.
+
+### 13.3 API + UI
+
+* `GET  /api/purchase/properties` — live inventory for the propose dialog.
+* `POST /api/purchase/propose` — `{property_id, buyer, note}` (employee/counsel).
+* `POST /api/purchase/decision` — `{workflow_id, decision: accept|decline, note}` (buyer).
+* `POST /api/purchase/sign` — `{workflow_id, note}` (buyer).
+
+Portal payloads carry `purchase.workflows` (flat rows: property code,
+buyer, connected advocate/auditor, price, documents, status) for the
+employee (all workflows), the client (offers addressed to them), and the
+advocate (workflows they were connected to). The frontend renders a
+**Sale Pipeline** table in the employee workspace (with a "Propose sale"
+button + modal on every property card), a **Property Offers** table in
+the client workspace (Accept / Decline / Sign & complete actions), and a
+read-only pipeline in the advocate workspace.
+
+Tests: `tests/test_purchase.py` (lifecycle, role gating, portal
+payloads, RAG retrievability of sale documents, HTTP endpoints).
