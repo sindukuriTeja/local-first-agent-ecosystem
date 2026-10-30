@@ -386,6 +386,11 @@ function renderStakeholderPanel(portal, wfs, inputs) {
 export async function refreshWorkflowPanel() {
   const panel = document.getElementById('wf-panel')
   if (!panel) return
+
+  // Don't refresh if user is actively typing inside the panel
+  const active = document.activeElement
+  if (active && active.closest && active.closest('#wf-panel')) return
+
   const portal = panel.dataset.portal
   try {
     const data = await api.portal()

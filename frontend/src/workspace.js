@@ -230,7 +230,15 @@ async function loadPortalData() {
     connectWorkflow(() => refreshWorkflowPanel())
     // Polling fallback: refresh workflow panel every 5s in case WS misses an event
     if (window._wfPollTimer) clearInterval(window._wfPollTimer)
-    window._wfPollTimer = setInterval(() => refreshWorkflowPanel(), 5000)
+    window._wfPollTimer = setInterval(() => {
+      // Don't refresh if user is actively typing in the workflow panel
+      const active = document.activeElement
+      const inWfPanel = active && (
+        active.classList.contains('wf-answer-input') ||
+        active.closest && active.closest('#wf-panel')
+      )
+      if (!inWfPanel) refreshWorkflowPanel()
+    }, 5000)
     // Immediate refresh after 1s to catch any inputs created just before page load
     setTimeout(() => refreshWorkflowPanel(), 1000)
     // Also refresh when tab becomes visible again
