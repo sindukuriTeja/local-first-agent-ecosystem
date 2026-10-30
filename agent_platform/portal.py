@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from .core.auth import PortalUser, PORTAL_DOC_TYPES
 from .core.base_agent import AgentContext, AgentResult
+from .core.rag import doc_in_scope
 from .platform import Platform
 
 _LEVELS = ["public", "internal", "confidential", "restricted"]
@@ -89,27 +90,12 @@ class PortalService:
         return out
 
     def _in_scope(self, user: PortalUser, doc) -> bool:
-        """Matter/client/parcel scoping. Firm-wide roles see everything."""
-        md = _meta(doc)
-        if user.portal in ("management", "admin"):
-            return True
-        if user.portal == "auditor":
-            # auditors only get explicitly compliance/audit-labelled docs
-            return doc.doc_type in ("compliance", "audit", "case_analysis", "tax")
-        if user.portal == "client":
-            client = md.get("client")
-            return (not client) or (not user.clients) or (client in user.clients)
-        if user.portal == "tenant":
-            parcel = md.get("parcel")
-            return (not parcel) or (not user.parcels) or (parcel in user.parcels)
-        # employee / counsel: matter + client assignment
-        matter = md.get("matter")
-        client = md.get("client")
-        if matter and user.matters and matter not in user.matters:
-            return False
-        if client and user.clients and client not in user.clients:
-            return False
-        return True
+        """Matter/client/parcel scoping. Firm-wide roles see everything.
+
+        Delegates to the shared ``doc_in_scope`` rule so the portal
+        document lists and the RAG search apply identical scope.
+        """
+        return doc_in_scope(user, doc)
 
     # ------------------------------------------------------------------
     # per-portal payloads
@@ -139,6 +125,13 @@ class PortalService:
 
         # Real-time collaboration workflow queue (all roles)
         data["workflow"] = self.workflow_data(user)
+
+        # Governed RAG search surface (all roles). Every portal can ask
+        # the documentation store; results are scoped to this user.
+        data["rag"] = {
+            "available": True,
+            "suggested_queries": self._rag_suggested_queries(user),
+        }
 
         if user.portal == "employee":
             data.update(self._employee(user, docs, by_type))
@@ -396,6 +389,58 @@ class PortalService:
         if res is None:
             raise KeyError(f"price request {request_id} not found")
         return res
+
+    # ------------------------------------------------------------------
+    # RAG (governed documentation search + grounded answer)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _rag_suggested_queries(user: PortalUser) -> List[str]:
+        base = {
+            "employee": [
+                "What is the filing deadline for my matters?",
+                "Summarize the status of my assigned cases",
+                "Available flats in Hyderabad",
+            ],
+            "counsel": [
+                "What statute applies to matter M-100?",
+                "Summarize the evidence for my assigned case",
+                "Research the limitation period for my matter",
+            ],
+            "auditor": [
+                "List all compliance deadlines",
+                "What are the open compliance risks?",
+                "Show the audit trail for the last 30 days",
+            ],
+            "management": [
+                "Firm-wide open deadlines and risks",
+                "Workload by matter",
+                "How many properties are available?",
+            ],
+            "client": [
+                "What is the status of my case?",
+                "What reports are available to me?",
+            ],
+            "tenant": [
+                "What is the status of my parcel?",
+                "What updates are there for my property?",
+            ],
+            "admin": [
+                "How many documents are in the knowledge store?",
+                "Pending approvals",
+            ],
+        }
+        return base.get(user.portal, ["Search the firm's documents…"])
+
+    def rag_search(self, user: PortalUser, query: str,
+                   top_k: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Scoped document search for this user (sensitivity + doc-type +
+        matter/client/parcel). Includes the mirrored property inventory."""
+        return self.p.rag_search(user.username, query, user.tenant, top_k)
+
+    def rag_answer(self, user: PortalUser, query: str,
+                   top_k: Optional[int] = None) -> Dict[str, Any]:
+        """Grounded, scoped answer over this user's documents."""
+        return self.p.rag_answer(user.username, query, user.tenant, top_k)
 
     # ------------------------------------------------------------------
     # AI-assisted task prompts (per portal)

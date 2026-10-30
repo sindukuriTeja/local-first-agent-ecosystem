@@ -73,6 +73,11 @@ class RequestSubmit(BaseModel):
     message: str
 
 
+class RagQuery(BaseModel):
+    query: str
+    top_k: Optional[int] = None
+
+
 class ApproveRequest(BaseModel):
     approval_id: str
     decision: str  # approved | rejected | corrected
@@ -319,6 +324,27 @@ def create_app(platform=None) -> FastAPI:
         if decision is None:
             raise HTTPException(status_code=404, detail="approval not found")
         return decision.__dict__
+
+    # ---- RAG (governed documentation search + grounded answer) ----------
+    # Available to EVERY authenticated portal user (not just approvers),
+    # scoped to what that user may read. This is the employee / auditor /
+    # advocate "ask the documentation" surface.
+    @app.get("/api/rag")
+    def rag_status(user=Dep(current_user)):
+        return {
+            "available": True,
+            "suggested_queries": PortalService._rag_suggested_queries(user),
+        }
+
+    @app.post("/api/rag/search")
+    def rag_search(req: RagQuery, user=Dep(current_user)):
+        results = svc().rag_search(user, req.query, req.top_k)
+        return {"query": req.query, "results": results,
+                "count": len(results)}
+
+    @app.post("/api/rag/ask")
+    def rag_ask(req: RagQuery, user=Dep(current_user)):
+        return svc().rag_answer(user, req.query, req.top_k)
 
     # ---- real-time collaboration workflow ------------------------------
     def _wf(p):

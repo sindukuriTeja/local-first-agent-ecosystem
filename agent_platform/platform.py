@@ -23,6 +23,7 @@ from .core.knowledge import KnowledgeStore
 from .core.memory import MemorySystem
 from .core.ollama import OllamaClient, ModelRegistry
 from .core.policy import Identity, PolicyEngine
+from .core.rag import RAGService, sync_properties_to_knowledge
 from .core.telephony import build_voice_provider
 from .learning.answerer import GroundedAnswerer
 from .learning.consolidator import MemoryConsolidator
@@ -56,6 +57,8 @@ class Platform:
         self.knowledge = self.services.knowledge
         self.policy = self.services.policy
         self.approval = self.services.approval
+        # Governed RAG service (scoped documentation retrieval + answer).
+        self.rag = RAGService(self)
 
     # ---------- identity ----------
 
@@ -218,6 +221,75 @@ class Platform:
                 f"Role '{identity.role}' is not an approver.")
         return self.learning_scheduler.review(candidate_id, decision,
                                               reviewer=decided_by)
+
+    # ---------- RAG (governed documentation retrieval) -------------------
+
+    def rag_search(self, username: str, query: str,
+                   tenant: str = "default",
+                   top_k: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Scoped document search for a user. Returns plain dicts of the
+        matching chunks with citations, restricted to what the user may
+        read (sensitivity + doc-type + matter/client/parcel scope)."""
+        identity = self.identify(username, tenant)
+        if identity is None:
+            return []
+        # Build a lightweight user view for the RAG scope rules.
+        user = self._rag_user_view(username, identity, tenant)
+        results = self.rag.search(user, query, top_k)
+        return [
+            {
+                "source": r.record.source,
+                "title": r.record.title,
+                "doc_type": r.record.doc_type,
+                "sensitivity": r.record.sensitivity,
+                "score": round(r.score, 4),
+                "excerpt": (r.matched_chunks[0] if r.matched_chunks
+                            else r.record.content)[:320],
+            }
+            for r in results
+        ]
+
+    def rag_answer(self, username: str, query: str,
+                   tenant: str = "default",
+                   top_k: Optional[int] = None) -> Dict[str, Any]:
+        """Grounded, scoped answer to a question over the user's documents
+        (including the mirrored property inventory)."""
+        identity = self.identify(username, tenant)
+        if identity is None:
+            return {"answer": f"Unknown user '{username}'.",
+                    "sources": [], "grounded": False, "model": False}
+        user = self._rag_user_view(username, identity, tenant)
+        result = self.rag.answer(user, query, top_k)
+        self.audit.record(
+            actor="rag", action="rag_query",
+            detail={"user": username, "query": query[:200],
+                    "grounded": result.get("grounded"),
+                    "n_sources": len(result.get("sources", []))},
+            user=username, result="ok" if result.get("grounded") else "no_match",
+        )
+        return result
+
+    def _rag_user_view(self, username: str, identity, tenant: str):
+        """Build a PortalUser-shaped view for RAG scoping.
+
+        Uses the multi-portal auth directory when available (so scope
+        assignments like matters/clients/parcels apply); falls back to a
+        firm-wide view for legacy CLI/API users.
+        """
+        from .core.auth import PortalUser
+        if self.auth is not None:
+            u = self.auth.get_user(username)
+            if u is not None:
+                return u
+        return PortalUser(username=username, role=identity.role,
+                          display_name=username,
+                          portal="admin" if identity.role == "admin"
+                          else "employee",
+                          tenant=tenant)
+
+    def sync_properties(self) -> int:
+        """Mirror the property inventory into the knowledge store."""
+        return sync_properties_to_knowledge(self)
 
     def seed_dataset(self, dataset_dir: str) -> int:
         """Load a generated dataset (documents.json) into the knowledge
@@ -468,6 +540,14 @@ def create_platform(config_path: Optional[str] = None,
                 _auto_seed(platform, settings)
         except Exception:
             pass
+
+    # Mirror the property inventory into the knowledge store so property
+    # data is searchable through the same governed RAG path as every other
+    # document. Idempotent (upserted by source).
+    try:
+        sync_properties_to_knowledge(platform)
+    except Exception:
+        pass
 
     # Phase 2: wire the self-learning engine (default from config).
     if enable_learning is None:

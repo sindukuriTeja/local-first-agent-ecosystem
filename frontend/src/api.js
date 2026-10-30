@@ -97,6 +97,13 @@ export const api = {
       body: { approval_id, decision, note },
     }),
 
+  // RAG — governed documentation search + grounded answer (all roles)
+  ragStatus: () => request('/api/rag'),
+  ragSearch: (query, top_k = null) =>
+    request('/api/rag/search', { method: 'POST', body: { query, top_k } }),
+  ragAsk: (query, top_k = null) =>
+    request('/api/rag/ask', { method: 'POST', body: { query, top_k } }),
+
   // real-time collaboration workflow
   wfList: () => request('/api/workflow'),
   wfCreate: (subject, message, matter = null) =>
