@@ -207,11 +207,12 @@ def _frontend_dist() -> str:
 def _frontend_dir() -> str:
     root = _project_root()
     frontend_path = os.path.join(root, "frontend")
+    dist_path = os.path.join(frontend_path, "dist")
+    # Prefer the built dist when it contains an index.html (Docker / prod)
+    if os.path.isfile(os.path.join(dist_path, "index.html")):
+        return dist_path
     if os.path.isdir(frontend_path):
         return frontend_path
-    dist_path = os.path.join(frontend_path, "dist")
-    if os.path.isdir(dist_path):
-        return dist_path
     return root
 
 
@@ -721,7 +722,11 @@ def create_app(platform=None) -> FastAPI:
             if os.path.isdir(subpath):
                 app.mount(f"/{sub}", StaticFiles(directory=subpath), name=sub)
 
-        dist_assets = os.path.join(frontend_dir, "dist", "assets")
+        # assets may be inside frontend_dir directly (when frontend_dir == dist)
+        # or inside a dist sub-folder (dev mode where frontend_dir == frontend/)
+        dist_assets = os.path.join(frontend_dir, "assets")
+        if not os.path.isdir(dist_assets):
+            dist_assets = os.path.join(frontend_dir, "dist", "assets")
         if os.path.isdir(dist_assets):
             app.mount("/assets", StaticFiles(directory=dist_assets), name="assets")
 

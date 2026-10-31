@@ -387,9 +387,10 @@ export async function refreshWorkflowPanel() {
   const panel = document.getElementById('wf-panel')
   if (!panel) return
 
-  // Don't refresh if user is actively typing inside the panel
+  // Don't refresh only if user is actively typing in a text field inside the panel
   const active = document.activeElement
-  if (active && active.closest && active.closest('#wf-panel')) return
+  const isTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+  if (isTyping && active.closest && active.closest('#wf-panel')) return
 
   const portal = panel.dataset.portal
   try {
