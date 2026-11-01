@@ -401,12 +401,15 @@ export async function refreshWorkflowPanel() {
     const html = renderWorkflowPanel(portal, wfData)
     if (!html) return
 
-    // Preserve any open modal + input focus.
+    // Snapshot all answer-input values before replacing (keyed by data-input id)
+    const savedAnswers = {}
+    panel.querySelectorAll('.wf-answer-input[data-input]').forEach((el) => {
+      if (el.value.trim()) savedAnswers[el.dataset.input] = el.value
+    })
+
+    // Preserve any open modal.
     const modalRoot = document.getElementById('wf-modal-root')
     const modalHtml = modalRoot ? modalRoot.innerHTML : ''
-    const focused = document.activeElement
-    const fid = focused && focused.id ? focused.id : null
-    const fval = focused && focused.value ? focused.value : null
 
     // Replace the outer panel element entirely so wf-panel doesn't nest
     const tmp = document.createElement('div')
@@ -425,13 +428,20 @@ export async function refreshWorkflowPanel() {
     const updatedPanel = document.getElementById('wf-panel')
     if (updatedPanel) updatedPanel._wfBound = false
 
-    // Re-attach modal + focus.
+    // Re-attach modal.
     const newModal = document.getElementById('wf-modal-root')
     if (newModal) newModal.innerHTML = modalHtml
-    if (fid) {
-      const el = document.getElementById(fid)
-      if (el) { el.focus(); if (fval) el.value = fval }
+
+    // Restore any answer text the user had typed
+    if (updatedPanel && Object.keys(savedAnswers).length > 0) {
+      updatedPanel.querySelectorAll('.wf-answer-input[data-input]').forEach((el) => {
+        if (savedAnswers[el.dataset.input]) {
+          el.value = savedAnswers[el.dataset.input]
+          el.focus()
+        }
+      })
     }
+
     bindWorkflowEvents(portal)
   } catch {
     /* keep existing panel on transient errors */
@@ -463,16 +473,20 @@ export function bindWorkflowEvents(portal) {
     if (t.classList.contains('wf-note-btn')) openNoteModal(t.dataset.wf)
     if (t.classList.contains('wf-complete-btn')) openCompleteModal(t.dataset.wf)
     if (t.classList.contains('wf-answer-btn')) {
-      const input = panel.querySelector(`.wf-answer-input[data-input="${t.dataset.input}"]`)
-      if (input && input.value.trim()) {
-        const answer = input.value.trim()
+      // Always look up the live panel from DOM — the panel node may have been
+      // replaced by a re-render since this handler was bound, making the
+      // closed-over `panel` reference stale/detached.
+      const livePanel = document.getElementById('wf-panel') || t.closest('.wf-panel')
+      const input = livePanel && livePanel.querySelector(`.wf-answer-input[data-input="${t.dataset.input}"]`)
+      const answer = (input && input.value.trim()) || t.dataset.pendingAnswer || ''
+      if (answer) {
         t.disabled = true
         t.textContent = 'Sending…'
         try {
           await act('input/answer', { input_id: t.dataset.input, answer })
         } catch (err) {
           t.disabled = false
-          t.textContent = 'Send'
+          t.textContent = 'Send →'
           showToast && showToast({ title: 'Error', message: err.message || 'Failed to send answer', type: 'error' })
           console.error('wf-answer-btn error:', err)
         }
