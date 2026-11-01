@@ -12,6 +12,46 @@ let wsReady = false
 let reconnectTimer = null
 let activeHandlers = []
 
+// Persistent store of typed answer values keyed by input_id.
+// Survives panel re-renders because it lives at module scope.
+const _answerDraft = {}
+
+// One-time body-level delegate for wf-answer-btn (attached once, never removed).
+let _bodyDelegateAttached = false
+function _ensureBodyDelegate() {
+  if (_bodyDelegateAttached) return
+  _bodyDelegateAttached = true
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.wf-answer-btn')
+    if (!btn) return
+    const inputId = btn.dataset.input
+    if (!inputId) return
+    // Read answer from the live sibling input, or fall back to draft store
+    const panel = document.getElementById('wf-panel')
+    const inputEl = panel && panel.querySelector(`.wf-answer-input[data-input="${inputId}"]`)
+    const answer = (inputEl && inputEl.value.trim()) || _answerDraft[inputId] || ''
+    if (!answer) return
+    // Clear draft
+    delete _answerDraft[inputId]
+    btn.disabled = true
+    btn.textContent = 'Sending…'
+    try {
+      await act('input/answer', { input_id: inputId, answer })
+    } catch (err) {
+      btn.disabled = false
+      btn.textContent = 'Send →'
+      showToast && showToast({ title: 'Error', message: err.message || 'Failed to send answer', type: 'error' })
+    }
+  })
+  // Persist typed answer text into _answerDraft so re-renders don't lose it
+  document.addEventListener('input', (e) => {
+    const el = e.target
+    if (el && el.classList && el.classList.contains('wf-answer-input') && el.dataset.input) {
+      _answerDraft[el.dataset.input] = el.value
+    }
+  })
+}
+
 // ---------------------------------------------------------------------------
 // WebSocket lifecycle
 // ---------------------------------------------------------------------------
@@ -401,12 +441,15 @@ export async function refreshWorkflowPanel() {
     const html = renderWorkflowPanel(portal, wfData)
     if (!html) return
 
-    // Preserve any open modal + input focus.
+    // Snapshot all answer-input values before replacing (keyed by data-input id)
+    const savedAnswers = {}
+    panel.querySelectorAll('.wf-answer-input[data-input]').forEach((el) => {
+      if (el.value.trim()) savedAnswers[el.dataset.input] = el.value
+    })
+
+    // Preserve any open modal.
     const modalRoot = document.getElementById('wf-modal-root')
     const modalHtml = modalRoot ? modalRoot.innerHTML : ''
-    const focused = document.activeElement
-    const fid = focused && focused.id ? focused.id : null
-    const fval = focused && focused.value ? focused.value : null
 
     // Replace the outer panel element entirely so wf-panel doesn't nest
     const tmp = document.createElement('div')
@@ -425,13 +468,19 @@ export async function refreshWorkflowPanel() {
     const updatedPanel = document.getElementById('wf-panel')
     if (updatedPanel) updatedPanel._wfBound = false
 
-    // Re-attach modal + focus.
+    // Re-attach modal.
     const newModal = document.getElementById('wf-modal-root')
     if (newModal) newModal.innerHTML = modalHtml
-    if (fid) {
-      const el = document.getElementById(fid)
-      if (el) { el.focus(); if (fval) el.value = fval }
+
+    // Restore any answer text the user had typed (from module-level draft store)
+    if (updatedPanel && Object.keys(_answerDraft).length > 0) {
+      updatedPanel.querySelectorAll('.wf-answer-input[data-input]').forEach((el) => {
+        if (_answerDraft[el.dataset.input]) {
+          el.value = _answerDraft[el.dataset.input]
+        }
+      })
     }
+
     bindWorkflowEvents(portal)
   } catch {
     /* keep existing panel on transient errors */
@@ -442,6 +491,9 @@ export async function refreshWorkflowPanel() {
 // event binding (delegated so re-renders keep working)
 // ---------------------------------------------------------------------------
 export function bindWorkflowEvents(portal) {
+  // Attach the body-level delegate once — handles answer inputs across all re-renders
+  _ensureBodyDelegate()
+
   const panel = document.getElementById('wf-panel')
   if (!panel || panel._wfBound) return
   panel._wfBound = true
@@ -450,6 +502,8 @@ export function bindWorkflowEvents(portal) {
   panel.addEventListener('click', async (e) => {
     const t = e.target.closest('button')
     if (!t) return
+    // Skip answer buttons — handled by body-level delegate above
+    if (t.classList.contains('wf-answer-btn')) return
     // Management-only actions — block for other portals
     const isMgmt = portal === 'management' || portal === 'admin'
     if (t.classList.contains('wf-approve-btn')) { if (isMgmt) openAssignModal(t.dataset.wf); return }
@@ -462,22 +516,6 @@ export function bindWorkflowEvents(portal) {
     if (t.classList.contains('wf-input-btn')) openInputModal(t.dataset.wf)
     if (t.classList.contains('wf-note-btn')) openNoteModal(t.dataset.wf)
     if (t.classList.contains('wf-complete-btn')) openCompleteModal(t.dataset.wf)
-    if (t.classList.contains('wf-answer-btn')) {
-      const input = panel.querySelector(`.wf-answer-input[data-input="${t.dataset.input}"]`)
-      if (input && input.value.trim()) {
-        const answer = input.value.trim()
-        t.disabled = true
-        t.textContent = 'Sending…'
-        try {
-          await act('input/answer', { input_id: t.dataset.input, answer })
-        } catch (err) {
-          t.disabled = false
-          t.textContent = 'Send'
-          showToast && showToast({ title: 'Error', message: err.message || 'Failed to send answer', type: 'error' })
-          console.error('wf-answer-btn error:', err)
-        }
-      }
-    }
   })
 
   // NOTE: modal form submits are delegated on the body-level #wf-modal-root
