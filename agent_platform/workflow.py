@@ -385,10 +385,11 @@ class WorkflowEngine:
             self._publish("workflow.ai_result", wf, employee_username,
                           {"prompt": prompt[:80], "answer": answer, "status": "ok"})
 
-            # Auto-ask client if interested in buying
+            # Ask client for complete property & purchase details
             created_by = wf.get("created_by")
             created_by_portal = wf.get("created_by_portal", "client")
             already_asked = any(
+                "flat" in (i.get("question") or "").lower() or
                 "interested" in (i.get("question") or "").lower()
                 for i in wf.get("inputs", [])
             )
@@ -401,10 +402,19 @@ class WorkflowEngine:
                     "to_user": created_by,
                     "to_portal": created_by_portal,
                     "question": (
-                        f"Based on our analysis:\n\n{answer[:600]}\n\n"
-                        f"Are you interested in proceeding with the purchase? "
-                        f"Reply 'Yes' to generate the Sale & Purchase Agreement, "
-                        f"or 'No' to decline."
+                        f"Based on our analysis:\n\n{answer[:500]}\n\n"
+                        f"To prepare your Sale & Purchase Agreement we need your complete details.\n"
+                        f"Please provide ALL of the following:\n\n"
+                        f"1. Full name of buyer\n"
+                        f"2. Exact property address (street, area, city, pincode)\n"
+                        f"3. Flat / Unit number\n"
+                        f"4. Floor number\n"
+                        f"5. Total purchase price (₹)\n"
+                        f"6. Advance / token amount you will pay (₹)\n"
+                        f"7. Names of neighbors (left flat, right flat, above, below) if known\n"
+                        f"8. Preferred completion / possession date\n"
+                        f"9. Any special terms or conditions\n\n"
+                        f"Reply with all details to generate your agreement."
                     ),
                     "status": "pending",
                     "answer": None,
@@ -414,12 +424,12 @@ class WorkflowEngine:
                 wf.setdefault("inputs", []).append(inp)
                 wf["status"] = ST_WAITING_INPUT
                 self._log(wf, employee_username, "input_requested",
-                          f"AI Employee asked {created_by}: Are you interested?")
+                          f"AI Employee asked {created_by}: Please provide property details for agreement")
                 self._save()
                 self._publish("workflow.input_requested", wf, employee_username,
                               {"input_id": inp_id, "to_user": created_by,
                                "to_portal": created_by_portal,
-                               "question": "Are you interested in proceeding?"})
+                               "question": "Please provide complete property details for the agreement"})
         except Exception:
             pass  # never crash the main thread
 
@@ -591,6 +601,7 @@ class WorkflowEngine:
         created_by_portal = wf.get("created_by_portal")
         # Only auto-ask once — skip if there's already a pending interest-check input
         already_asked = any(
+            "flat" in (i.get("question") or "").lower() or
             "interested" in (i.get("question") or "").lower()
             for i in wf.get("inputs", [])
         )
@@ -605,9 +616,19 @@ class WorkflowEngine:
                 "to_user": created_by,
                 "to_portal": created_by_portal,
                 "question": (
-                    "Based on the property details shared above, "
-                    "are you interested in buying this property? "
-                    "Please reply Yes or No with any questions you have."
+                    f"Based on the property details shared above, we can prepare your "
+                    f"Sale & Purchase Agreement.\n\n"
+                    f"Please provide ALL of the following details:\n\n"
+                    f"1. Full name of buyer\n"
+                    f"2. Exact property address (street, area, city, pincode)\n"
+                    f"3. Flat / Unit number\n"
+                    f"4. Floor number\n"
+                    f"5. Total purchase price (₹)\n"
+                    f"6. Advance / token amount you will pay (₹)\n"
+                    f"7. Names of neighbors (left flat, right flat, above, below) if known\n"
+                    f"8. Preferred completion / possession date\n"
+                    f"9. Any special terms or conditions\n\n"
+                    f"Reply with all details to generate your agreement."
                 ),
                 "status": "pending",
                 "answer": None,
@@ -703,15 +724,17 @@ class WorkflowEngine:
         self._log(wf, user, "input_answered",
                   f"{user} answered: {answer}", {"input_id": input_id})
 
-        # --- Auto legal document generation when client says YES -----------
-        is_interest_question = "interested" in (inp.get("question") or "").lower()
+        # --- Auto legal document generation when client provides property details -----------
+        is_details_question = (
+            "flat" in (inp.get("question") or "").lower() or
+            "interested" in (inp.get("question") or "").lower() or
+            "agreement" in (inp.get("question") or "").lower()
+        )
         answer_lower = answer.strip().lower()
-        client_said_yes = any(w in answer_lower for w in [
-            "yes", "interested", "agree", "ok", "sure", "confirm",
-            "proceed", "buy", "purchase", "i will", "please"
-        ])
+        # Don't generate if client explicitly declines
+        client_declined = any(w in answer_lower for w in ["no", "not interested", "cancel", "decline"])
 
-        if is_interest_question and client_said_yes and self.ai_runner:
+        if is_details_question and not client_declined and self.ai_runner:
             # Kick off AI Advocate + AI Auditor in parallel background threads
             threading.Thread(
                 target=self._ai_advocate_auditor_review,
@@ -776,6 +799,15 @@ class WorkflowEngine:
             message = wf.get("message", "")
             state = {"workflow_id": wf_id, "workflow_subject": subject, "workflow_message": message}
 
+            # Collect all client-provided details from answered inputs
+            client_details = ""
+            for inp in wf.get("inputs", []):
+                if inp.get("status") == "answered" and inp.get("answer"):
+                    q = inp.get("question", "")
+                    if "flat" in q.lower() or "interested" in q.lower() or "agreement" in q.lower():
+                        client_details = inp["answer"]
+                        break
+
             # Step 1: AI Employee generates the Sale & Purchase Agreement
             self._log(wf, assigned_to, "ai",
                       "AI Employee: Generating Sale & Purchase Agreement…",
@@ -785,11 +817,27 @@ class WorkflowEngine:
             self._save()
 
             doc_prompt = (
-                f"Generate a professional Sale and Purchase Agreement.\n"
-                f"Subject: {subject}\nBuyer: {created_by}\nMessage: {message}\n\n"
-                f"Include: Parties, Property Description, Purchase Price, "
-                f"Payment Terms, Representations & Warranties, Completion Date, "
-                f"Governing Law (Indian Contract Act 1872)."
+                f"Generate a detailed, complete Sale and Purchase Agreement using ALL the details below.\n\n"
+                f"=== BUYER REQUEST ===\n"
+                f"Subject: {subject}\n"
+                f"Original message: {message}\n\n"
+                f"=== CLIENT PROVIDED DETAILS ===\n"
+                f"{client_details}\n\n"
+                f"=== INSTRUCTIONS ===\n"
+                f"Create a formal Sale and Purchase Agreement that includes:\n"
+                f"1. PARTIES — Full name of Seller (the Company) and Buyer (from client details)\n"
+                f"2. PROPERTY DESCRIPTION — Exact address, flat/unit number, floor, area in sq.ft, survey/plot number\n"
+                f"3. NEIGHBORS — Names of neighbors on all sides if provided\n"
+                f"4. PURCHASE PRICE — Exact amount in ₹ as stated by client\n"
+                f"5. ADVANCE/TOKEN AMOUNT — Exact advance amount and due date\n"
+                f"6. PAYMENT SCHEDULE — Advance, installments, final payment with dates\n"
+                f"7. POSSESSION DATE — As mentioned by client\n"
+                f"8. REPRESENTATIONS & WARRANTIES\n"
+                f"9. DEFAULT CLAUSE\n"
+                f"10. GOVERNING LAW — Indian Contract Act 1872, Registration Act 1908\n"
+                f"11. SIGNATURES — Buyer, Seller, Two Witnesses\n\n"
+                f"Use ONLY the actual details provided. Do NOT use placeholders like 'as agreed' or 'TBD'.\n"
+                f"If any detail is missing, state 'To be confirmed' for that field only."
             )
             try:
                 doc_result = self.ai_runner(assigned_to, doc_prompt, state)
@@ -798,18 +846,64 @@ class WorkflowEngine:
                 doc_text = ""
 
             if not doc_text.strip():
+                import re
+                # Parse client_details for key fields
+                def extract(pattern, text, default="To be confirmed"):
+                    m = re.search(pattern, text, re.IGNORECASE)
+                    return m.group(1).strip() if m else default
+
+                buyer_name = extract(r'(?:full name|buyer|name)[:\s]+([^\n]+)', client_details) or created_by
+                address = extract(r'(?:address|location|property)[:\s]+([^\n]+)', client_details)
+                flat_no = extract(r'(?:flat|unit)[^\d]*(\w+)', client_details)
+                floor = extract(r'floor[^\d]*(\w+)', client_details)
+                price = extract(r'(?:price|amount|total)[^\d]*([\d,₹\s]+)', client_details)
+                advance = extract(r'(?:advance|token)[^\d]*([\d,₹\s]+)', client_details)
+                possession = extract(r'(?:possession|completion|date)[:\s]+([^\n]+)', client_details)
+                neighbors = extract(r'(?:neighbor|neighbour)[s:\s]+([^\n]+)', client_details)
+
                 doc_text = (
-                    f"SALE AND PURCHASE AGREEMENT\n\n"
-                    f"Date: {_now()[:10]}\n"
-                    f"Buyer: {created_by}\nSubject: {subject}\n\n"
-                    f"This agreement is entered between the Seller (the Company) "
-                    f"and {created_by} (Buyer) for the property inquiry '{subject}'.\n\n"
-                    f"1. Property: As described in the inquiry.\n"
-                    f"2. Purchase Price: As agreed between parties.\n"
-                    f"3. Payment: 30% on signing, 70% on completion.\n"
-                    f"4. Completion Date: 90 days from signing.\n"
-                    f"5. Governing Law: Indian Contract Act, 1872.\n"
-                    f"\n[Auto-generated by AI Employee — reviewed by AI Advocate & Auditor]"
+                    f"SALE AND PURCHASE AGREEMENT\n"
+                    f"{'='*50}\n\n"
+                    f"Date: {_now()[:10]}\n\n"
+                    f"PARTIES\n"
+                    f"-------\n"
+                    f"Seller: The Company (Registered Real Estate Agency)\n"
+                    f"Buyer:  {buyer_name}\n\n"
+                    f"PROPERTY DESCRIPTION\n"
+                    f"--------------------\n"
+                    f"Address:     {address}\n"
+                    f"Flat/Unit:   {flat_no}\n"
+                    f"Floor:       {floor}\n"
+                    f"Neighbors:   {neighbors}\n\n"
+                    f"FINANCIAL TERMS\n"
+                    f"---------------\n"
+                    f"Total Purchase Price: {price}\n"
+                    f"Advance/Token Amount: {advance}\n"
+                    f"Payment Schedule:\n"
+                    f"  - Token/Advance: {advance} on signing\n"
+                    f"  - Balance:       Remaining amount on possession\n\n"
+                    f"POSSESSION\n"
+                    f"----------\n"
+                    f"Possession Date: {possession}\n\n"
+                    f"TERMS & CONDITIONS\n"
+                    f"------------------\n"
+                    f"1. The Seller guarantees clear title, free of encumbrances.\n"
+                    f"2. The Buyer shall conduct due diligence before signing.\n"
+                    f"3. In case of default by Buyer, advance amount is forfeited.\n"
+                    f"4. In case of default by Seller, double the advance is refunded.\n"
+                    f"5. This agreement is governed by the Indian Contract Act, 1872\n"
+                    f"   and the Registration Act, 1908.\n"
+                    f"6. Any dispute shall be resolved by arbitration in the jurisdiction\n"
+                    f"   of the property location.\n\n"
+                    f"SIGNATURES\n"
+                    f"----------\n"
+                    f"Buyer:    ________________  Date: ________\n"
+                    f"          {buyer_name}\n\n"
+                    f"Seller:   ________________  Date: ________\n"
+                    f"          Authorised Signatory\n\n"
+                    f"Witness 1: _______________  Date: ________\n"
+                    f"Witness 2: _______________  Date: ________\n\n"
+                    f"[Generated by AI Employee — reviewed by AI Advocate & AI Auditor]"
                 )
 
             wf["legal_document"] = doc_text
