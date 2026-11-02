@@ -731,8 +731,11 @@ class WorkflowEngine:
             "agreement" in (inp.get("question") or "").lower()
         )
         answer_lower = answer.strip().lower()
-        # Don't generate if client explicitly declines
-        client_declined = any(w in answer_lower for w in ["no", "not interested", "cancel", "decline"])
+        # Only decline if the answer is a short explicit refusal (not "No. 45" in an address)
+        client_declined = (
+            len(answer.strip()) < 30 and
+            any(answer_lower.startswith(w) for w in ["no", "not interested", "cancel", "decline", "nope"])
+        )
 
         if is_details_question and not client_declined and self.ai_runner:
             # Kick off AI Advocate + AI Auditor in parallel background threads
@@ -818,26 +821,28 @@ class WorkflowEngine:
 
             doc_prompt = (
                 f"Generate a detailed, complete Sale and Purchase Agreement using ALL the details below.\n\n"
-                f"=== BUYER REQUEST ===\n"
+                f"=== PROPERTY REQUEST ===\n"
                 f"Subject: {subject}\n"
-                f"Original message: {message}\n\n"
+                f"Buyer username: {created_by}\n"
+                f"Original request: {message}\n\n"
                 f"=== CLIENT PROVIDED DETAILS ===\n"
-                f"{client_details}\n\n"
+                f"{client_details if client_details else '(Client confirmed interest)'}\n\n"
                 f"=== INSTRUCTIONS ===\n"
-                f"Create a formal Sale and Purchase Agreement that includes:\n"
-                f"1. PARTIES — Full name of Seller (the Company) and Buyer (from client details)\n"
-                f"2. PROPERTY DESCRIPTION — Exact address, flat/unit number, floor, area in sq.ft, survey/plot number\n"
-                f"3. NEIGHBORS — Names of neighbors on all sides if provided\n"
-                f"4. PURCHASE PRICE — Exact amount in ₹ as stated by client\n"
-                f"5. ADVANCE/TOKEN AMOUNT — Exact advance amount and due date\n"
-                f"6. PAYMENT SCHEDULE — Advance, installments, final payment with dates\n"
-                f"7. POSSESSION DATE — As mentioned by client\n"
+                f"Create a formal Sale and Purchase Agreement. Extract all real values from the request above.\n"
+                f"Infer the city/location from the subject/message (e.g. 'flat in Chennai' → Chennai).\n"
+                f"Use the buyer username as the buyer name if no full name is given.\n"
+                f"Include these sections with REAL values (never write 'TBD' or 'as agreed'):\n"
+                f"1. PARTIES — Seller: The Company; Buyer: {created_by}\n"
+                f"2. PROPERTY DESCRIPTION — Address/city extracted from request, flat no, floor\n"
+                f"3. NEIGHBORS — If not provided, write 'To be provided by Seller'\n"
+                f"4. PURCHASE PRICE — Use amount from request, or write market rate for the city\n"
+                f"5. ADVANCE/TOKEN AMOUNT — 10% of purchase price if not stated\n"
+                f"6. PAYMENT SCHEDULE\n"
+                f"7. POSSESSION DATE — 90 days from signing if not stated\n"
                 f"8. REPRESENTATIONS & WARRANTIES\n"
                 f"9. DEFAULT CLAUSE\n"
-                f"10. GOVERNING LAW — Indian Contract Act 1872, Registration Act 1908\n"
-                f"11. SIGNATURES — Buyer, Seller, Two Witnesses\n\n"
-                f"Use ONLY the actual details provided. Do NOT use placeholders like 'as agreed' or 'TBD'.\n"
-                f"If any detail is missing, state 'To be confirmed' for that field only."
+                f"10. GOVERNING LAW — Indian Contract Act 1872\n"
+                f"11. SIGNATURES — Buyer, Seller, Two Witnesses\n"
             )
             try:
                 doc_result = self.ai_runner(assigned_to, doc_prompt, state)
@@ -847,19 +852,107 @@ class WorkflowEngine:
 
             if not doc_text.strip():
                 import re
-                # Parse client_details for key fields
-                def extract(pattern, text, default="To be confirmed"):
-                    m = re.search(pattern, text, re.IGNORECASE)
-                    return m.group(1).strip() if m else default
 
-                buyer_name = extract(r'(?:full name|buyer|name)[:\s]+([^\n]+)', client_details) or created_by
-                address = extract(r'(?:address|location|property)[:\s]+([^\n]+)', client_details)
-                flat_no = extract(r'(?:flat|unit)[^\d]*(\w+)', client_details)
-                floor = extract(r'floor[^\d]*(\w+)', client_details)
-                price = extract(r'(?:price|amount|total)[^\d]*([\d,₹\s]+)', client_details)
-                advance = extract(r'(?:advance|token)[^\d]*([\d,₹\s]+)', client_details)
-                possession = extract(r'(?:possession|completion|date)[:\s]+([^\n]+)', client_details)
-                neighbors = extract(r'(?:neighbor|neighbour)[s:\s]+([^\n]+)', client_details)
+                # Combine ALL available text sources for extraction
+                all_text = f"{subject}\n{message}\n{client_details}"
+
+                # Parse numbered list format (1. value\n2. value\n...)
+                def parse_numbered(text, number):
+                    """Extract value for item N from a numbered list, stripping label prefixes."""
+                    m = re.search(
+                        rf'^\s*{number}[\.\)]\s*(.+?)(?=\n\s*\d+[\.\)]|\Z)',
+                        text, re.MULTILINE | re.DOTALL)
+                    if m:
+                        val = m.group(1).strip().strip('.,;')
+                        # Strip common label prefixes like "Total price: ", "Advance: ", etc.
+                        val = re.sub(
+                            r'^(?:full\s+name|buyer|name|address|flat\s*(?:no|number)?|'
+                            r'unit\s*(?:no|number)?|floor\s*(?:no|number)?|'
+                            r'total\s+(?:purchase\s+)?price|advance(?:\s*/\s*token)?(?:\s+amount)?|'
+                            r'token(?:\s+amount)?|possession(?:\s+date)?|'
+                            r'neighbors?|special\s+terms?|terms?|conditions?)'
+                            r'\s*[:\-]?\s*',
+                            '', val, flags=re.IGNORECASE).strip()
+                        return val if val else None
+                    return None
+
+                def extract(patterns, text, default="To be provided"):
+                    for pattern in (patterns if isinstance(patterns, list) else [patterns]):
+                        m = re.search(pattern, text, re.IGNORECASE)
+                        if m:
+                            val = m.group(1).strip().strip('.,;')
+                            if val and len(val) > 1:
+                                return val
+                    return default
+
+                # Try numbered list first (client answers 1. name 2. address etc.)
+                n1 = parse_numbered(client_details, 1)   # buyer name
+                n2 = parse_numbered(client_details, 2)   # address
+                n3 = parse_numbered(client_details, 3)   # flat no
+                n4 = parse_numbered(client_details, 4)   # floor
+                n5 = parse_numbered(client_details, 5)   # price
+                n6 = parse_numbered(client_details, 6)   # advance
+                n7 = parse_numbered(client_details, 7)   # neighbors
+                n8 = parse_numbered(client_details, 8)   # possession
+                n9 = parse_numbered(client_details, 9)   # special terms
+
+                buyer_name = n1 or extract([
+                    r'(?:my name is|buyer[:\s]+|name[:\s]+)([A-Za-z][\w\s]{2,40})',
+                ], all_text, default=created_by)
+
+                # Address: use numbered answer, fall back to regex, then city from subject
+                address = n2 or extract([
+                    r'(?:address|located at|location|property at)[:\s]+([^\n]{5,})',
+                ], client_details)
+                if not n2 and address == "To be provided":
+                    city_match = re.search(
+                        r'\b(chennai|hyderabad|bangalore|bengaluru|mumbai|delhi|pune|kolkata|'
+                        r'noida|gurgaon|gurugram|ahmedabad|surat|jaipur|lucknow|kochi|'
+                        r'coimbatore|vizag|visakhapatnam|bhopal|indore|nagpur|vadodara|'
+                        r'velachery|adyar|anna nagar|t\.?nagar|whitefield|koramangala|'
+                        r'banjara hills|jubilee hills|hitech city|madhapur)\b',
+                        all_text, re.IGNORECASE)
+                    if city_match:
+                        address = city_match.group(1).title()
+
+                flat_no = n3 or extract([
+                    r'(?:flat\s*(?:no|number|#)?[:\s]+)([A-Za-z0-9\-/]+)',
+                    r'(?:unit\s*(?:no|number|#)?[:\s]+)([A-Za-z0-9\-/]+)',
+                    r'(?:door\s*(?:no|number)?[:\s]+)([A-Za-z0-9\-/]+)',
+                ], client_details)
+
+                floor_val = n4 or extract([
+                    r'(\d+(?:st|nd|rd|th)?\s*floor)',
+                    r'floor[:\s#]*(\d+\w*)',
+                ], all_text)
+
+                price = n5 or extract([
+                    r'(?:price|cost|total|worth|value|budget)[:\s₹]*([\d,\.]+\s*(?:lakhs?|crores?|lacs?|L|Cr)?)',
+                    r'₹\s*([\d,\.]+\s*(?:lakhs?|crores?|lacs?|L|Cr)?)',
+                    r'([\d,\.]+\s*(?:lakhs?|crores?|lacs?))',
+                    r'under\s+([\d,\.]+\s*(?:lakhs?|crores?|lacs?))',
+                ], all_text)
+
+                advance = n6 or extract([
+                    r'(?:advance|token|booking)[:\s₹]*([\d,\.]+\s*(?:lakhs?|crores?|lacs?|L|Cr)?)',
+                    r'(?:advance|token)\s+of\s+₹?\s*([\d,\.]+)',
+                ], all_text)
+                if advance == "To be provided" and price != "To be provided":
+                    advance = f"10% of {price}"
+
+                neighbors = n7 or extract([
+                    r'(?:neighbor|neighbour)[s:\s]+([\w\s,\.]+?)(?:\n|$)',
+                ], client_details, default="To be provided by Seller")
+                # Strip any "Neighbors:" prefix left in the value
+                neighbors = re.sub(r'^neighbors?\s*[:\-]?\s*', '', neighbors, flags=re.IGNORECASE).strip()
+
+                possession = n8 or extract([
+                    r'(?:possession|completion|handover|move.in)[:\s]+([\w\s,\-/]+?)(?:\n|$)',
+                    r'(?:by|before|on)\s+([\w]+\s+20\d\d)',
+                    r'(\d+\s*(?:months?|years?)\s*from)',
+                ], all_text, default="90 days from signing")
+
+                special_terms = n9 or "None"
 
                 doc_text = (
                     f"SALE AND PURCHASE AGREEMENT\n"
@@ -871,20 +964,25 @@ class WorkflowEngine:
                     f"Buyer:  {buyer_name}\n\n"
                     f"PROPERTY DESCRIPTION\n"
                     f"--------------------\n"
+                    f"Property:    {subject}\n"
                     f"Address:     {address}\n"
                     f"Flat/Unit:   {flat_no}\n"
-                    f"Floor:       {floor}\n"
-                    f"Neighbors:   {neighbors}\n\n"
+                    f"Floor:       {floor_val}\n"
+                    f"Neighbors:\n"
+                    f"  {neighbors}\n\n"
                     f"FINANCIAL TERMS\n"
                     f"---------------\n"
-                    f"Total Purchase Price: {price}\n"
-                    f"Advance/Token Amount: {advance}\n"
+                    f"Total Purchase Price: ₹{price}\n"
+                    f"Advance/Token Amount: ₹{advance}\n"
                     f"Payment Schedule:\n"
-                    f"  - Token/Advance: {advance} on signing\n"
-                    f"  - Balance:       Remaining amount on possession\n\n"
+                    f"  - Token/Advance: ₹{advance} payable on signing this agreement\n"
+                    f"  - Balance:        Remaining amount payable on possession\n\n"
                     f"POSSESSION\n"
                     f"----------\n"
                     f"Possession Date: {possession}\n\n"
+                    f"SPECIAL TERMS\n"
+                    f"-------------\n"
+                    f"{special_terms}\n\n"
                     f"TERMS & CONDITIONS\n"
                     f"------------------\n"
                     f"1. The Seller guarantees clear title, free of encumbrances.\n"
